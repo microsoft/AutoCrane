@@ -1,0 +1,14 @@
+<Project>
+    <ItemDefinitionGroup>
+        <PackageReference>
+            <GeneratePathProperty>true</GeneratePathProperty>
+        </PackageReference>
+    </ItemDefinitionGroup>
+    <ItemGroup>
+        <PackageReference Include="Moq" Version="4.14.6" />
+        <PackageReference Include="MSTest.TestAdapter" Version="2.1.2" />
+        <PackageReference Include="MSTest.TestFramework" Version="2.1.2" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.7.1" />
+        <PackageReference Include="StyleCop.Analyzers" Version="1.1.118" />
+    </ItemGroup>
+</Project>

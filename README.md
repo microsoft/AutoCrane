@@ -8,7 +8,63 @@ Another important feature is the concept of a data deployment. Applications ofte
 # AutoCrane Components
 
 AutoCrane is configured with Kubernetes Custom Resource Definitions (CRDs). The CRDs are:
-  - AutoCraneDeployment: A deployment spec with data sources, rollout config, and failing limit config
+  - AutoCraneDeployment: A replicaSetSpec with data sources, rollout config, and failing limit config
+
+Components:
+  - AutoCrane: Watches for AutoCraneDeployment CRDs, creates Kubernetes pods for apps.
+    Asks VersionWatcher for latest app version and manages rollouts/rollbacks.
+    Asks DataRepository for latest synced data and tells DataDeployer what version of data to sync.
+    Kills failing pods up to specified limits.
+  - DataDeployer: an init and sidecar container for downloading data from DataRepository
+  - DataRepository: Asks VersionWatcher for new data versions, downloads locally, serves to cluster.
+  - Get/Post Watchdog: A utility to get or post watchdog information.
+  - VersionWatcher: Probes upstream sources for new app and data versions.
+  - WatchdogListener: Web service that lists for posting of watchdog status. Updates annotations/labels
+
+
+# Setup
+
+## Developer
+
+If you are running Kubernetes locally with [minikube](https://github.com/kubernetes/minikube/releases), use this command to set up docker to build images:
+
+`minikube docker-env`
+
+Build an image like this:
+
+`docker build . -t autocrane`
+
+Install it like this:
+
+`dotnet run --project src/AutoCrane/AutoCrane.csproj -- yaml | kubectl apply -f -`
+
+or
+
+`docker run -e AUTOCRANE_ARGS=yaml -it autocrane | kubectl apply -f -`
+
+## Running Tools
+
+Post a watchdog status (using kubernetes config credentials)
+
+`dotnet run -- postwatchdog --Pod:Namespace=autocrane --Pod:Name=watchdoglistener-6957bbc9cf-w979c --Watchdog:Name=test --Watchdog:Level=Warning --Watchdog:Message=hi`
+
+Get watchdog status (using kubernetes config credentials)
+
+`dotnet run -- getwatchdog --Pod:Namespace=autocrane --Pod:Name=watchdoglistener-6957bbc9cf-w979c`
+
+View rollup status:
+
+`kubectl get pods -L status.autocrane.io/health`
+
+Post watchdog status (inside the watchdog listener pod):
+
+`curl http://localhost:8080/watchdogs/autocrane/watchdoglistener-6957bbc9cf-wgpzb -X PUT -H "Content-Type: application/json" -d "{\"Name\": \"test1\", \"Level\": \"Error\", \"Message\": \"failure\"}"`
+
+View individual watchdogs (inside the watchdog listener pod):
+
+`curl http://localhost:8080/watchdogs/autocrane/watchdoglistener-6957bbc9cf-wgpzb`
+
+
 
 # Contributing
 

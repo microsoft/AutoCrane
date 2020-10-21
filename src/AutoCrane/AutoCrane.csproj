@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="KubernetesClient" Version="2.0.33" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.9" />
+    <PackageReference Include="Serilog" Version="2.10.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
+    <PackageReference Include="Serilog.Sinks.Async" Version="1.4.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
+    <PackageReference Include="StyleCop.Analyzers" PrivateAssets="All" Version="1.1.118" />
+    <PackageReference Include="System.Text.Json" Version="5.0.0-rc.2.20475.5" />
+  </ItemGroup>
+
+
+    <Target Name="DockerBuildScript" AfterTargets="AfterBuild" DependsOnTargets="CoreCompile" Condition="!Exists('$(MSBuildProjectDirectory)/../../build-docker.bat') AND !Exists('/source') AND Exists('$(MSBuildProjectDirectory)/../../generate-build-docker.bat')">
+        <Exec Command="minikube docker-env --shell=cmd" ConsoleToMsBuild="true" >
+            <Output TaskParameter="ConsoleOutput" PropertyName="DockerBuildLines" />
+        </Exec>
+        <WriteLinesToFile Lines="$(DockerBuildLines)" File="$(MSBuildProjectDirectory)/../../build-docker.bat"/>
+        <WriteLinesToFile Lines="docker build . -t autocrane" File="$(MSBuildProjectDirectory)/../../build-docker.bat" Overwrite="false"/>
+    </Target>
+
+    <Target Name="BuildDockerImage" AfterTargets="DockerBuildScript" DependsOnTargets="DockerBuildScript" Condition="Exists('$(MSBuildProjectDirectory)/../../build-docker.bat') AND !Exists('/source')">
+        <Exec Command="build-docker.bat" ConsoleToMsBuild="true" WorkingDirectory="$(MSBuildProjectDirectory)/../.." />
+    </Target>
+
+</Project>

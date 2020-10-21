@@ -1,0 +1,10 @@
+# https://aka.ms/yaml
+name: "$(Year:yyyy).$(Month).$(DayOfMonth)$(Rev:.r)"
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- bash: |
+    set -euxo pipefail
+    docker build -f Dockerfile.tests .

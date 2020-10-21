@@ -1,0 +1,42 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30420.98
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoCrane", "src\AutoCrane\AutoCrane.csproj", "{A43A5C24-1948-4679-AEDB-13D74114C8C6}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoCrane.Tests", "src\AutoCrane.Tests\AutoCrane.Tests.csproj", "{441E7B81-F9F3-4B6C-A195-673C9E093C5E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "solution", "solution", "{316B1194-0C7B-42A1-A51C-29A78DB55E70}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		.gitattributes = .gitattributes
+		.gitignore = .gitignore
+		src\Directory.Build.props = src\Directory.Build.props
+		nuget.config = nuget.config
+		src\Packages.props = src\Packages.props
+		stylecop.json = stylecop.json
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A43A5C24-1948-4679-AEDB-13D74114C8C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A43A5C24-1948-4679-AEDB-13D74114C8C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A43A5C24-1948-4679-AEDB-13D74114C8C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A43A5C24-1948-4679-AEDB-13D74114C8C6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{441E7B81-F9F3-4B6C-A195-673C9E093C5E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{441E7B81-F9F3-4B6C-A195-673C9E093C5E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{441E7B81-F9F3-4B6C-A195-673C9E093C5E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{441E7B81-F9F3-4B6C-A195-673C9E093C5E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {51F3C4DC-2E26-4D42-98ED-0B8D5F7AB60C}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,10 @@
+{
+    "msbuild-sdks": {
+      "Microsoft.Build.CentralPackageVersions": "2.0.79",
+      "Microsoft.Build.NoTargets": "2.0.1"
+    },
+    "sdk": {
+      "version": "5.0.100-rc.2.20479.15",
+      "rollForward": "latestMinor"
+    }
+  }

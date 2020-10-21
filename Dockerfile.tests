@@ -1,0 +1,4 @@
+FROM mcr.microsoft.com/dotnet/sdk:5.0-alpine AS build
+COPY . /source/
+WORKDIR /source/src/AutoCrane.Tests
+RUN dotnet test
