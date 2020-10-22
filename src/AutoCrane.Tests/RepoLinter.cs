@@ -34,7 +34,7 @@ namespace AutoCrane.Tests
                 {
                     if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
                     {
-                        // continue;
+                        continue;
                     }
 
                     // \r character
