@@ -36,6 +36,7 @@ namespace AutoCrane
             services.AddSingleton<IMonkeyWorkload, MonkeyWorkload>();
 
             services.AddSingleton<KubernetesClient>();
+            services.AddSingleton<WatchdogProber>();
             services.AddSingleton<GetWatchdogService>();
             services.AddSingleton<PostWatchdogService>();
             services.AddSingleton<Orchestrator>();

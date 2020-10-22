@@ -36,11 +36,7 @@ Build an image like this:
 
 Install it like this:
 
-`dotnet run --project src/AutoCrane/AutoCrane.csproj -- yaml | kubectl apply -f -`
-
-or
-
-`docker run -e AUTOCRANE_ARGS=yaml -it autocrane | kubectl apply -f -`
+`docker run -e AUTOCRANE_ARGS="yaml use_testworkload=1" -it autocrane | kubectl apply -f -`
 
 ## Running Tools
 
@@ -56,13 +52,7 @@ View rollup status:
 
 `kubectl get pods -L status.autocrane.io/health`
 
-Post watchdog status (inside the watchdog listener pod):
 
-`curl http://localhost:8080/watchdogs/autocrane/watchdoglistener-6957bbc9cf-wgpzb -X PUT -H "Content-Type: application/json" -d "{\"Name\": \"test1\", \"Level\": \"Error\", \"Message\": \"failure\"}"`
-
-View individual watchdogs (inside the watchdog listener pod):
-
-`curl http://localhost:8080/watchdogs/autocrane/watchdoglistener-6957bbc9cf-wgpzb`
 
 
 

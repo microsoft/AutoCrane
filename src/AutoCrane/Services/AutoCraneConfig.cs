@@ -26,6 +26,15 @@ namespace AutoCrane.Services
                 this.EvictionDeleteGracePeriodSeconds = 120;
             }
 
+            if (options.Value.WatchdogProbeTimeoutSeconds.HasValue)
+            {
+                this.WatchdogProbeTimeout = TimeSpan.FromSeconds(options.Value.WatchdogProbeTimeoutSeconds.Value);
+            }
+            else
+            {
+                this.WatchdogProbeTimeout = TimeSpan.FromSeconds(5);
+            }
+
             if (string.IsNullOrEmpty(options.Value.Namespaces))
             {
                 return;
@@ -40,6 +49,8 @@ namespace AutoCrane.Services
         public IEnumerable<string> Namespaces => this.allowedNamespaces;
 
         public long EvictionDeleteGracePeriodSeconds { get; private set; }
+
+        public TimeSpan WatchdogProbeTimeout { get; private set; }
 
         public bool IsAllowedNamespace(string ns)
         {

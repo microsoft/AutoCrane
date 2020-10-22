@@ -57,6 +57,9 @@ namespace AutoCrane
                     case "postwatchdog":
                         return DependencyInjection.GetServiceProvider(newargs).GetRequiredService<PostWatchdogService>().RunAsync().GetAwaiter().GetResult();
 
+                    case "watchdogprober":
+                        return DependencyInjection.GetServiceProvider(newargs).GetRequiredService<WatchdogProber>().RunAsync().GetAwaiter().GetResult();
+
                     case "testworkload":
                         WebHosting.RunWebService<TestWorkload>(newargs);
                         return 0;

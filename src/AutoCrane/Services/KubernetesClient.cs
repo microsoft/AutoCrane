@@ -142,7 +142,18 @@ namespace AutoCrane.Services
                 var list = new List<PodInfo>(podList.Items.Count);
                 foreach (var item in podList.Items)
                 {
-                    list.Add(new PodInfo(new PodIdentifier(item.Namespace(), item.Name()), new Dictionary<string, string>(item.Annotations()), item.Status.PodIP));
+                    var ann = item.Annotations();
+                    IReadOnlyDictionary<string, string> dict;
+                    if (ann == null)
+                    {
+                        dict = new Dictionary<string, string>();
+                    }
+                    else
+                    {
+                        dict = new Dictionary<string, string>(ann);
+                    }
+
+                    list.Add(new PodInfo(new PodIdentifier(item.Namespace(), item.Name()), dict, item.Status.PodIP));
                 }
 
                 return list;
@@ -158,7 +169,12 @@ namespace AutoCrane.Services
             }
         }
 
-        public async Task PutPodAnnotationAsync(PodIdentifier podName, string name, string val, bool updateHealth = true)
+        public Task PutPodAnnotationAsync(PodIdentifier podName, string name, string val, bool updateHealth = true)
+        {
+            return this.PutPodAnnotationAsync(podName, new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>(name, val) }, updateHealth);
+        }
+
+        public async Task PutPodAnnotationAsync(PodIdentifier podName, IReadOnlyList<KeyValuePair<string, string>> annotationsToUpdate, bool updateHealth = true)
         {
             try
             {
@@ -168,10 +184,11 @@ namespace AutoCrane.Services
                 }
 
                 var existingPod = await this.client.ReadNamespacedPodAsync(podName.Name, podName.Namespace);
-                var newannotations = new Dictionary<string, string>(existingPod.Annotations() ?? new Dictionary<string, string>())
+                var newannotations = new Dictionary<string, string>(existingPod.Annotations() ?? new Dictionary<string, string>());
+                foreach (var ann in annotationsToUpdate)
                 {
-                    [name] = val,
-                };
+                    newannotations[ann.Key] = ann.Value;
+                }
 
                 var patch = new JsonPatchDocument<V1Pod>();
                 patch.Replace(e => e.Metadata.Annotations, newannotations);

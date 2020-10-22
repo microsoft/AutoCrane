@@ -207,6 +207,71 @@ spec:
 
 ";
 
+        private const string WatchdogProberYaml = @"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: watchdogprober
+  namespace: !!NAMESPACE!!
+  labels:
+    app.kubernetes.io/name: watchdogprober
+    app.kubernetes.io/part-of: autocrane
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: pod-reader-writer-binding-watchdogprober
+subjects:
+- kind: ServiceAccount
+  name: watchdogprober
+  namespace: !!NAMESPACE!!
+roleRef:
+  kind: ClusterRole
+  name: pod-reader-writer
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: watchdogprober
+  namespace: !!NAMESPACE!!
+  labels:
+    app.kubernetes.io/name: watchdogprober
+    app.kubernetes.io/part-of: autocrane
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: watchdogprober
+  replicas: !!WATCHDOGPROBER_REPLICAS!!
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: watchdogprober
+        app.kubernetes.io/part-of: autocrane
+    spec:
+      containers:
+      - name: watchdogprober
+        image: !!IMAGE!!
+        imagePullPolicy: !!PULL!!
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+          - name: AUTOCRANE_ARGS
+            value: watchdogprober
+          - name: AutoCrane__Namespaces
+            value: !!AUTOCRANE_NAMESPACES!!
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50M
+      serviceAccountName: watchdogprober
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+
+";
+
         private const string TestWorkloadYaml = @"
 ---
 apiVersion: v1
@@ -233,6 +298,8 @@ spec:
   replicas: !!TESTWORKLOAD_REPLICAS!!
   template:
     metadata:
+      annotations:
+        probe.autocrane.io/watchdog1: POD_IP:8080/watchdog
       labels:
         app.kubernetes.io/name: testworkload
         app.kubernetes.io/part-of: autocrane
@@ -279,11 +346,13 @@ spec:
                 ["image"] = "autocrane",
                 ["pull"] = "Never", // for local development
                 ["autocrane_namespaces"] = "autocrane", // namespaces to operate in
-                ["watchdoglistener_replicas"] = "3",
                 ["autocrane_replicas"] = "1",
-                ["use_watchdoglistener"] = "0",
-                ["use_testworkload"] = "0",
+                ["watchdoglistener_replicas"] = "3",
+                ["watchdogprober_replicas"] = "1",
                 ["testworkload_replicas"] = "3",
+                ["use_watchdoglistener"] = "0",
+                ["use_watchdogprober"] = "1",
+                ["use_testworkload"] = "0",
             };
 
             foreach (var arg in args)
@@ -308,12 +377,17 @@ spec:
             var output = Yaml.Replace("\r", string.Empty);
             if (config["use_watchdoglistener"] != "0")
             {
-                output = output + WatchdogListenerYaml.Replace("\r", string.Empty);
+                output += WatchdogListenerYaml.Replace("\r", string.Empty);
             }
 
             if (config["use_testworkload"] != "0")
             {
-                output = output + TestWorkloadYaml.Replace("\r", string.Empty);
+                output += TestWorkloadYaml.Replace("\r", string.Empty);
+            }
+
+            if (config["use_watchdogprober"] != "0")
+            {
+                output += WatchdogProberYaml.Replace("\r", string.Empty);
             }
 
             foreach (var item in config)
