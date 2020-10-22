@@ -9,10 +9,10 @@ namespace AutoCrane.Services
 {
     internal sealed class WatchdogStatusPutter : IWatchdogStatusPutter
     {
-        private readonly IKubernetesClient client;
+        private readonly KubernetesClient client;
         private readonly IClock clock;
 
-        public WatchdogStatusPutter(IKubernetesClient client, IClock clock)
+        public WatchdogStatusPutter(KubernetesClient client, IClock clock)
         {
             this.client = client;
             this.clock = clock;

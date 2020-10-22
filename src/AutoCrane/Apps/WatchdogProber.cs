@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace AutoCrane.Apps
 {
-    public sealed class Orchestrator
+    public sealed class WatchdogProber
     {
         private const int ConsecutiveErrorCountBeforeExiting = 5;
         private const int IterationLoopSeconds = 10;
@@ -22,7 +21,7 @@ namespace AutoCrane.Apps
         private readonly IPodEvicter podEvicter;
         private readonly ILogger<Orchestrator> logger;
 
-        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter)
+        public WatchdogProber(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter)
         {
             this.config = config;
             this.failingPodGetter = failingPodGetter;

@@ -26,6 +26,7 @@ namespace AutoCrane
                 Console.Error.WriteLine("  postwatchdog: Tool to update watchdog status.");
                 Console.Error.WriteLine("  versionwatcher: Probes origin sources for new app and data versions.");
                 Console.Error.WriteLine("  watchdoglistener: Web app that provides REST API for getting and setting watchdogs.");
+                Console.Error.WriteLine("  watchdogprober: Discovers probe endpoints through pod annotations, probes and sets watchdogs.");
                 Console.Error.WriteLine("  yaml: Generate yaml for installing into cluster.");
                 return 1;
             }

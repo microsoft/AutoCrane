@@ -23,12 +23,18 @@ namespace AutoCrane
 
             services.AddSingleton<IWatchdogStatusPutter, WatchdogStatusPutter>();
             services.AddSingleton<IWatchdogStatusGetter, WatchdogStatusGetter>();
+            services.AddSingleton<IFailingPodGetter, FailingPodGetter>();
+            services.AddSingleton<IPodAnnotationGetter, PodAnnotationGetter>();
+            services.AddSingleton<IPodAnnotationPutter, PodAnnotationPutter>();
+            services.AddSingleton<IPodEvicter, PodEvicter>();
             services.AddSingleton<IKubernetesConfigProvider, KubernetesConfigProvider>();
-            services.AddSingleton<IKubernetesClient, KubernetesClient>();
             services.AddSingleton<IWatchdogStatusAggregator, WatchdogStatusAggregator>();
+            services.AddSingleton<IPodAnnotationGetter, PodAnnotationGetter>();
             services.AddSingleton<IPodIdentifierFactory, PodIdentifierFactory>();
             services.AddSingleton<IAutoCraneConfig, AutoCraneConfig>();
             services.AddSingleton<IClock, DefaultClock>();
+
+            services.AddSingleton<KubernetesClient>();
             services.AddSingleton<GetWatchdogService>();
             services.AddSingleton<PostWatchdogService>();
             services.AddSingleton<Orchestrator>();
