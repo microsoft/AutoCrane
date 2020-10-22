@@ -24,6 +24,7 @@ namespace AutoCrane
                 Console.Error.WriteLine("  datarepo: Downloads data at origin and makes available to cluster.");
                 Console.Error.WriteLine("  getwatchdog: Tool to list watchdog status.");
                 Console.Error.WriteLine("  postwatchdog: Tool to update watchdog status.");
+                Console.Error.WriteLine("  testworkload: A webservice that can fail its watchdogs on demand.");
                 Console.Error.WriteLine("  versionwatcher: Probes origin sources for new app and data versions.");
                 Console.Error.WriteLine("  watchdoglistener: Web app that provides REST API for getting and setting watchdogs.");
                 Console.Error.WriteLine("  watchdogprober: Discovers probe endpoints through pod annotations, probes and sets watchdogs.");
@@ -55,6 +56,10 @@ namespace AutoCrane
 
                     case "postwatchdog":
                         return DependencyInjection.GetServiceProvider(newargs).GetRequiredService<PostWatchdogService>().RunAsync().GetAwaiter().GetResult();
+
+                    case "testworkload":
+                        WebHosting.RunWebService<TestWorkload>(newargs);
+                        return 0;
 
                     case "yaml":
                         return GenerateYaml.Run(newargs);

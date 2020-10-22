@@ -207,6 +207,70 @@ spec:
 
 ";
 
+        private const string TestWorkloadYaml = @"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: testworkload
+  namespace: !!NAMESPACE!!
+  labels:
+    app.kubernetes.io/name: testworkload
+    app.kubernetes.io/part-of: autocrane
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: testworkload
+  namespace: !!NAMESPACE!!
+  labels:
+    app.kubernetes.io/name: testworkload
+    app.kubernetes.io/part-of: autocrane
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: testworkload
+  replicas: !!TESTWORKLOAD_REPLICAS!!
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: testworkload
+        app.kubernetes.io/part-of: autocrane
+    spec:
+      containers:
+      - name: testworkload
+        image: !!IMAGE!!
+        imagePullPolicy: !!PULL!!
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+          - name: AUTOCRANE_ARGS
+            value: testworkload
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50M
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: http
+          initialDelaySeconds: 20
+          periodSeconds: 60
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 10
+      serviceAccountName: testworkload
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+
+";
+
         public static int Run(string[] args)
         {
             var config = new Dictionary<string, string>()
@@ -218,6 +282,8 @@ spec:
                 ["watchdoglistener_replicas"] = "3",
                 ["autocrane_replicas"] = "1",
                 ["use_watchdoglistener"] = "0",
+                ["use_testworkload"] = "0",
+                ["testworkload_replicas"] = "3",
             };
 
             foreach (var arg in args)
@@ -243,6 +309,11 @@ spec:
             if (config["use_watchdoglistener"] != "0")
             {
                 output = output + WatchdogListenerYaml.Replace("\r", string.Empty);
+            }
+
+            if (config["use_testworkload"] != "0")
+            {
+                output = output + TestWorkloadYaml.Replace("\r", string.Empty);
             }
 
             foreach (var item in config)

@@ -17,15 +17,13 @@ namespace AutoCrane.Apps
         private const int IterationLoopSeconds = 10;
         private const int WatchdogFailuresBeforeEviction = 3;
         private readonly IAutoCraneConfig config;
-        private readonly IFailingPodGetter failingPodGetter;
-        private readonly IPodEvicter podEvicter;
+        private readonly IPodGetter podGetter;
         private readonly ILogger<Orchestrator> logger;
 
-        public WatchdogProber(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter)
+        public WatchdogProber(IAutoCraneConfig config, ILoggerFactory loggerFactory, IPodGetter podGetter)
         {
             this.config = config;
-            this.failingPodGetter = failingPodGetter;
-            this.podEvicter = podEvicter;
+            this.podGetter = podGetter;
             this.logger = loggerFactory.CreateLogger<Orchestrator>();
         }
 
@@ -38,8 +36,6 @@ namespace AutoCrane.Apps
                 return 3;
             }
 
-            var podsWithFailingWatchdog = new Queue<List<PodIdentifier>>();
-
             while (iterations > 0)
             {
                 if (errorCount > ConsecutiveErrorCountBeforeExiting)
@@ -50,33 +46,10 @@ namespace AutoCrane.Apps
 
                 try
                 {
-                    var thisIterationFailingPods = new List<PodIdentifier>();
                     foreach (var ns in this.config.Namespaces)
                     {
-                        var failingPods = await this.failingPodGetter.GetFailingPodsAsync(ns);
-                        thisIterationFailingPods.AddRange(failingPods);
+                        var pods = await this.podGetter.GetPodsAsync(ns);
                     }
-
-                    while (podsWithFailingWatchdog.Count > WatchdogFailuresBeforeEviction)
-                    {
-                        podsWithFailingWatchdog.Dequeue();
-                    }
-
-                    if (podsWithFailingWatchdog.Count == WatchdogFailuresBeforeEviction)
-                    {
-                        var podsFailingEveryWatchdog = new HashSet<PodIdentifier>(thisIterationFailingPods);
-                        foreach (var iteration in podsWithFailingWatchdog)
-                        {
-                            podsFailingEveryWatchdog.IntersectWith(iteration);
-                        }
-
-                        if (podsFailingEveryWatchdog.Any())
-                        {
-                            await this.EvictPods(podsFailingEveryWatchdog);
-                        }
-                    }
-
-                    podsWithFailingWatchdog.Enqueue(thisIterationFailingPods);
 
                     await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds));
                     iterations--;
@@ -91,11 +64,6 @@ namespace AutoCrane.Apps
             }
 
             return 0;
-        }
-
-        private Task EvictPods(HashSet<PodIdentifier> pods)
-        {
-            return Task.WhenAll(pods.Select(p => this.podEvicter.EvictPodAsync(p)).ToArray());
         }
     }
 }

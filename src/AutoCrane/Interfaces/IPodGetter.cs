@@ -7,10 +7,10 @@ using AutoCrane.Models;
 
 namespace AutoCrane.Interfaces
 {
-    public interface IPodAnnotationGetter
+    public interface IPodGetter
     {
-        Task<IReadOnlyList<PodWithAnnotations>> GetPodAnnotationAsync(string ns);
+        Task<IReadOnlyList<PodInfo>> GetPodsAsync(string ns);
 
-        Task<PodWithAnnotations> GetPodAnnotationAsync(PodIdentifier podIdentifier);
+        Task<PodInfo> GetPodAsync(PodIdentifier podIdentifier);
     }
 }

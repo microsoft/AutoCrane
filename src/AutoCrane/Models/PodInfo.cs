@@ -5,16 +5,19 @@ using System.Collections.Generic;
 
 namespace AutoCrane.Models
 {
-    public class PodWithAnnotations
+    public class PodInfo
     {
-        public PodWithAnnotations(PodIdentifier id, IReadOnlyDictionary<string, string> annotations)
+        public PodInfo(PodIdentifier id, IReadOnlyDictionary<string, string> annotations, string ipAddress)
         {
             this.Id = id;
             this.Annotations = annotations;
+            this.PodIp = ipAddress ?? string.Empty;
         }
 
         public PodIdentifier Id { get; }
 
         public IReadOnlyDictionary<string, string> Annotations { get; }
+
+        public string PodIp { get; }
     }
 }

@@ -8,21 +8,21 @@ using AutoCrane.Models;
 
 namespace AutoCrane.Services
 {
-    internal class PodAnnotationGetter : IPodAnnotationGetter
+    internal class PodGetter : IPodGetter
     {
         private readonly KubernetesClient client;
 
-        public PodAnnotationGetter(KubernetesClient client)
+        public PodGetter(KubernetesClient client)
         {
             this.client = client;
         }
 
-        public Task<IReadOnlyList<PodWithAnnotations>> GetPodAnnotationAsync(string ns)
+        public Task<IReadOnlyList<PodInfo>> GetPodsAsync(string ns)
         {
             return this.client.GetPodAnnotationAsync(ns);
         }
 
-        public Task<PodWithAnnotations> GetPodAnnotationAsync(PodIdentifier podIdentifier)
+        public Task<PodInfo> GetPodAsync(PodIdentifier podIdentifier)
         {
             return this.client.GetPodAnnotationAsync(podIdentifier);
         }

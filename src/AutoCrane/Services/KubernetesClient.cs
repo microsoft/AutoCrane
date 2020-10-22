@@ -93,7 +93,7 @@ namespace AutoCrane.Services
             }
         }
 
-        public async Task<PodWithAnnotations> GetPodAnnotationAsync(PodIdentifier podName)
+        public async Task<PodInfo> GetPodAnnotationAsync(PodIdentifier podName)
         {
             try
             {
@@ -108,10 +108,10 @@ namespace AutoCrane.Services
                 if (annotations == null)
                 {
                     this.logger.LogError($"Annotations is null");
-                    return new PodWithAnnotations(podName, new Dictionary<string, string>());
+                    return new PodInfo(podName, new Dictionary<string, string>(), string.Empty);
                 }
 
-                return new PodWithAnnotations(podName, new Dictionary<string, string>(annotations));
+                return new PodInfo(podName, new Dictionary<string, string>(annotations), existingPod.Status.PodIP);
             }
             catch (HttpOperationException e)
             {
@@ -129,7 +129,7 @@ namespace AutoCrane.Services
             }
         }
 
-        public async Task<IReadOnlyList<PodWithAnnotations>> GetPodAnnotationAsync(string ns)
+        public async Task<IReadOnlyList<PodInfo>> GetPodAnnotationAsync(string ns)
         {
             try
             {
@@ -139,10 +139,10 @@ namespace AutoCrane.Services
                 }
 
                 var podList = await this.client.ListNamespacedPodAsync(ns);
-                var list = new List<PodWithAnnotations>(podList.Items.Count);
+                var list = new List<PodInfo>(podList.Items.Count);
                 foreach (var item in podList.Items)
                 {
-                    list.Add(new PodWithAnnotations(new PodIdentifier(item.Namespace(), item.Name()), new Dictionary<string, string>(item.Annotations())));
+                    list.Add(new PodInfo(new PodIdentifier(item.Namespace(), item.Name()), new Dictionary<string, string>(item.Annotations()), item.Status.PodIP));
                 }
 
                 return list;
