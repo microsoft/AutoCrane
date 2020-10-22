@@ -7,8 +7,8 @@ namespace AutoCrane.Models
     {
         public string? Namespaces { get; set; }
 
-        public int? EvictionDeleteGracePeriodSeconds { get; set; }
-
         public int? WatchdogProbeTimeoutSeconds { get; set; }
+
+        public int? EvictionDeleteGracePeriodSeconds { get; set; }
     }
 }
