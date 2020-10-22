@@ -10,19 +10,24 @@ namespace AutoCrane.Services
 {
     internal sealed class WatchdogStatusGetter : IWatchdogStatusGetter
     {
-        private readonly IKubernetesClient client;
+        private readonly KubernetesClient client;
 
-        public WatchdogStatusGetter(IKubernetesClient client)
+        public WatchdogStatusGetter(KubernetesClient client)
         {
             this.client = client;
         }
 
         public async Task<IReadOnlyList<WatchdogStatus>> GetStatusAsync(PodIdentifier podIdentifier)
         {
-            var annotations = await this.client.GetPodAnnotationAsync(podIdentifier);
+            var pod = await this.client.GetPodAnnotationAsync(podIdentifier);
             var list = new List<WatchdogStatus>();
-            foreach (var annotation in annotations)
+            foreach (var annotation in pod.Annotations)
             {
+                if (!annotation.Key.StartsWith(WatchdogStatus.Prefix))
+                {
+                    continue;
+                }
+
                 var splits = annotation.Value.Split('/', 2);
                 if (splits.Length > 1)
                 {

@@ -18,13 +18,15 @@ namespace AutoCrane.Apps
         private const int IterationLoopSeconds = 10;
         private const int WatchdogFailuresBeforeEviction = 3;
         private readonly IAutoCraneConfig config;
-        private readonly IKubernetesClient client;
+        private readonly IFailingPodGetter failingPodGetter;
+        private readonly IPodEvicter podEvicter;
         private readonly ILogger<Orchestrator> logger;
 
-        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IKubernetesClient client)
+        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter)
         {
             this.config = config;
-            this.client = client;
+            this.failingPodGetter = failingPodGetter;
+            this.podEvicter = podEvicter;
             this.logger = loggerFactory.CreateLogger<Orchestrator>();
         }
 
@@ -52,8 +54,8 @@ namespace AutoCrane.Apps
                     var thisIterationFailingPods = new List<PodIdentifier>();
                     foreach (var ns in this.config.Namespaces)
                     {
-                        var failingPods = await this.client.GetFailingPodsAsync(ns);
-                        thisIterationFailingPods.AddRange(failingPods.Select(fp => new PodIdentifier(ns, fp)));
+                        var failingPods = await this.failingPodGetter.GetFailingPodsAsync(ns);
+                        thisIterationFailingPods.AddRange(failingPods);
                     }
 
                     while (podsWithFailingWatchdog.Count > WatchdogFailuresBeforeEviction)
@@ -94,7 +96,7 @@ namespace AutoCrane.Apps
 
         private Task EvictPods(HashSet<PodIdentifier> pods)
         {
-            return Task.WhenAll(pods.Select(p => this.client.EvictPodAsync(p)).ToArray());
+            return Task.WhenAll(pods.Select(p => this.podEvicter.EvictPodAsync(p)).ToArray());
         }
     }
 }

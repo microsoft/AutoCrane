@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoCrane.Exceptions;
@@ -13,13 +12,11 @@ using k8s;
 using k8s.Models;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Microsoft.Rest;
-using Org.BouncyCastle.Bcpg.OpenPgp;
 
 namespace AutoCrane.Services
 {
-    internal sealed class KubernetesClient : IKubernetesClient
+    internal sealed class KubernetesClient
     {
         private readonly ILogger<KubernetesClient> logger;
         private readonly Kubernetes client;
@@ -68,7 +65,7 @@ namespace AutoCrane.Services
             }
         }
 
-        public async Task<IReadOnlyList<string>> GetFailingPodsAsync(string ns)
+        public async Task<IReadOnlyList<PodIdentifier>> GetFailingPodsAsync(string ns)
         {
             try
             {
@@ -78,13 +75,13 @@ namespace AutoCrane.Services
                 }
 
                 var list = await this.client.ListNamespacedPodAsync(ns, labelSelector: $"{WatchdogStatus.Prefix}health=error");
-                return list.Items.Select(li => li.Name()).ToList();
+                return list.Items.Select(li => new PodIdentifier(ns, li.Name())).ToList();
             }
             catch (HttpOperationException e)
             {
                 if (e.Response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    return Array.Empty<string>();
+                    return Array.Empty<PodIdentifier>();
                 }
 
                 if (!string.IsNullOrEmpty(e.Response.Content))
@@ -96,7 +93,7 @@ namespace AutoCrane.Services
             }
         }
 
-        public async Task<IReadOnlyDictionary<string, string>> GetPodAnnotationAsync(PodIdentifier podName)
+        public async Task<PodInfo> GetPodAnnotationAsync(PodIdentifier podName)
         {
             try
             {
@@ -111,10 +108,10 @@ namespace AutoCrane.Services
                 if (annotations == null)
                 {
                     this.logger.LogError($"Annotations is null");
-                    return new Dictionary<string, string>();
+                    return new PodInfo(podName, new Dictionary<string, string>(), string.Empty);
                 }
 
-                return annotations.Where(a => a.Key?.StartsWith(WatchdogStatus.Prefix) ?? false).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                return new PodInfo(podName, new Dictionary<string, string>(annotations), existingPod.Status.PodIP);
             }
             catch (HttpOperationException e)
             {
@@ -132,7 +129,52 @@ namespace AutoCrane.Services
             }
         }
 
-        public async Task PutPodAnnotationAsync(PodIdentifier podName, string name, string val)
+        public async Task<IReadOnlyList<PodInfo>> GetPodAnnotationAsync(string ns)
+        {
+            try
+            {
+                if (!this.config.IsAllowedNamespace(ns))
+                {
+                    throw new ForbiddenException($"namespace: {ns}");
+                }
+
+                var podList = await this.client.ListNamespacedPodAsync(ns);
+                var list = new List<PodInfo>(podList.Items.Count);
+                foreach (var item in podList.Items)
+                {
+                    var ann = item.Annotations();
+                    IReadOnlyDictionary<string, string> dict;
+                    if (ann == null)
+                    {
+                        dict = new Dictionary<string, string>();
+                    }
+                    else
+                    {
+                        dict = new Dictionary<string, string>(ann);
+                    }
+
+                    list.Add(new PodInfo(new PodIdentifier(item.Namespace(), item.Name()), dict, item.Status.PodIP));
+                }
+
+                return list;
+            }
+            catch (HttpOperationException e)
+            {
+                if (!string.IsNullOrEmpty(e.Response.Content))
+                {
+                    this.logger.LogError($"Exception response content: {e.Response.Content}");
+                }
+
+                throw;
+            }
+        }
+
+        public Task PutPodAnnotationAsync(PodIdentifier podName, string name, string val, bool updateHealth = true)
+        {
+            return this.PutPodAnnotationAsync(podName, new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>(name, val) }, updateHealth);
+        }
+
+        public async Task PutPodAnnotationAsync(PodIdentifier podName, IReadOnlyList<KeyValuePair<string, string>> annotationsToUpdate, bool updateHealth = true)
         {
             try
             {
@@ -142,19 +184,23 @@ namespace AutoCrane.Services
                 }
 
                 var existingPod = await this.client.ReadNamespacedPodAsync(podName.Name, podName.Namespace);
-                var newannotations = new Dictionary<string, string>(existingPod.Annotations() ?? new Dictionary<string, string>())
+                var newannotations = new Dictionary<string, string>(existingPod.Annotations() ?? new Dictionary<string, string>());
+                foreach (var ann in annotationsToUpdate)
                 {
-                    [name] = val,
-                };
-
-                var newlabels = new Dictionary<string, string>(existingPod.Labels())
-                {
-                    [$"{WatchdogStatus.Prefix}health"] = this.statusAggregator.Aggregate(newannotations),
-                };
+                    newannotations[ann.Key] = ann.Value;
+                }
 
                 var patch = new JsonPatchDocument<V1Pod>();
                 patch.Replace(e => e.Metadata.Annotations, newannotations);
-                patch.Replace(e => e.Metadata.Labels, newlabels);
+                if (updateHealth)
+                {
+                    var newlabels = new Dictionary<string, string>(existingPod.Labels())
+                    {
+                        [$"{WatchdogStatus.Prefix}health"] = this.statusAggregator.Aggregate(newannotations),
+                    };
+                    patch.Replace(e => e.Metadata.Labels, newlabels);
+                }
+
                 var result = await this.client.PatchNamespacedPodAsync(new V1Patch(patch), podName.Name, podName.Namespace);
                 Console.Error.WriteLine($"{result.Name()} updated");
             }

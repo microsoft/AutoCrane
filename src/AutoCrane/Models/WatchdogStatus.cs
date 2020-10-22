@@ -10,6 +10,7 @@ namespace AutoCrane.Models
     public sealed class WatchdogStatus
     {
         internal const string Prefix = "status.autocrane.io/";
+        internal const string ErrorLevel = "error";
 
         public static ISet<string> ValidLevels { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "error", "warning", "info" };
 
