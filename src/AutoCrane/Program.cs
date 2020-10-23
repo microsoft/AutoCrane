@@ -28,6 +28,7 @@ namespace AutoCrane
                 Console.Error.WriteLine("  versionwatcher: Probes origin sources for new app and data versions.");
                 Console.Error.WriteLine("  watchdoglistener: Web app that provides REST API for getting and setting watchdogs.");
                 Console.Error.WriteLine("  watchdogprober: Discovers probe endpoints through pod annotations, probes and sets watchdogs.");
+                Console.Error.WriteLine("  watchdoghealthz: Surfaces pod's watchdog health through a /healthz endpoint.");
                 Console.Error.WriteLine("  yaml: Generate yaml for installing into cluster.");
                 return 1;
             }
@@ -62,6 +63,10 @@ namespace AutoCrane
 
                     case "testworkload":
                         WebHosting.RunWebService<TestWorkload>(newargs);
+                        return 0;
+
+                    case "watchdoghealthz":
+                        WebHosting.RunWebService<WatchdogHealthz>(newargs);
                         return 0;
 
                     case "yaml":

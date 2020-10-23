@@ -19,5 +19,7 @@ namespace AutoCrane.Models
         public string? Level { get; set; }
 
         public string? Message { get; set; }
+
+        public bool IsFailure => ErrorLevel.Equals(this.Level ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 }

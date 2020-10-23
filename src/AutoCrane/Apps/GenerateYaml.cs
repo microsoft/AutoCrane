@@ -73,17 +73,6 @@ apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
   namespace: !!NAMESPACE!!
-  name: watchdoglistener-pdb
-spec:
-  minAvailable: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: watchdoglistener
----
-apiVersion: policy/v1beta1
-kind: PodDisruptionBudget
-metadata:
-  namespace: !!NAMESPACE!!
   name: autocrane-pdb
 spec:
   minAvailable: 1
@@ -151,6 +140,17 @@ roleRef:
   kind: ClusterRole
   name: pod-reader-writer
   apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  namespace: !!NAMESPACE!!
+  name: watchdoglistener-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: watchdoglistener
 ---
 apiVersion: apps/v1
 kind: Deployment
