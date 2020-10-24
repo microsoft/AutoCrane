@@ -11,16 +11,61 @@ AutoCrane is configured with Kubernetes Custom Resource Definitions (CRDs). The 
   - AutoCraneDeployment: A replicaSetSpec with data sources, rollout config, and failing limit config
 
 Components:
-  - AutoCrane: Watches for AutoCraneDeployment CRDs, creates Kubernetes pods for apps.
-    Asks VersionWatcher for latest app version and manages rollouts/rollbacks.
-    Asks DataRepository for latest synced data and tells DataDeployer what version of data to sync.
-    Kills failing pods up to specified limits.
+  - AutoCrane:
+    - Asks VersionWatcher for latest app version and manages rollouts/rollbacks.
+    - Asks DataRepository for latest synced data and tells DataDeployer what version of data to sync.
+    - Calls Eviction API on pods with watchdog failures.
   - DataDeployer: an init and sidecar container for downloading data from DataRepository
   - DataRepository: Asks VersionWatcher for new data versions, downloads locally, serves to cluster.
   - Get/Post Watchdog: A utility to get or post watchdog information.
   - VersionWatcher: Probes upstream sources for new app and data versions.
-  - WatchdogListener: Web service that lists for posting of watchdog status. Updates annotations/labels
+  - WatchdogProber: Finds watchdog probe URLs by scanning pod annotations. Probes and updates watchdog status annotations/labels
+  - WatchdogHealthz: Reads pod's watchdog annotations and provides a probe that succeeds/fails based on how long the pod has been in a healthy watchdog state.
 
+
+# Patterns
+
+## Watchdogs
+
+For steady-state errors in applications which you would not want to cause a global outage (e.g. data or cache refresh failures):
+  - Create an endpoint in one of the containers in a pod to signal such a failure
+  - Create a PodDisruptionBudget for your failing limits
+  - Set a an annotation: `probe.autocrane.io/watchdog1: POD_IP:8080/watchdog` (watchdog1 is the watchdog name)
+  - WatchdogProber will scan for that annotation and update annotations/labels on your failing pods
+  - AutoCrane will call the eviction API on pods with a watchdog error (it scans periodically and if it hasn't cleared after a few scans)
+
+
+## Using Watchdogs to Stop Deployment Rollout
+
+To block a deployment on watchdog failures we'll create a dummy sidecar pod that maps watchdog errors to a readiness probe.
+The catch is that we don't want to fail the readiness probe after the deployment is complete, because that will hurt availability.
+
+  - Take note of deployment.spec.progressDeadlineSeconds and deployment.spec.minReadySeconds.
+  - Add a sidecar container to your pod using the AutoCrane image and watchdoghealthz function:
+```
+      - name: watchdoghealthz
+        image: <autocrane>
+        env:
+          - name: AUTOCRANE_ARGS
+            value: watchdoghealthz
+          - name: LISTEN_PORT
+            value: "8081"
+          - name: Watchdogs__AlwaysHealthyAfterSeconds
+            value: <set to deployment.spec.progressDeadlineSeconds>
+          - name: Pod__Name
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: Pod__Namespace
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          failureThreshold: 1
+```
 
 # Setup
 

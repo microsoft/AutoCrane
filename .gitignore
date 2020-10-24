@@ -47,4 +47,4 @@ StyleCopReport.xml
 
 /build-docker.bat
 /generate-build-docker.bat
-
+/tmp

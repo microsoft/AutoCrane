@@ -97,11 +97,6 @@ namespace AutoCrane.Services
         {
             try
             {
-                if (!this.config.IsAllowedNamespace(podName.Namespace))
-                {
-                    throw new ForbiddenException($"namespace: {podName.Namespace}");
-                }
-
                 this.logger.LogInformation($"ReadNamespacedPodAsync {podName.Namespace} {podName.Name}");
                 var existingPod = await this.client.ReadNamespacedPodAsync(podName.Name, podName.Namespace);
                 var annotations = existingPod.Annotations();
@@ -133,11 +128,6 @@ namespace AutoCrane.Services
         {
             try
             {
-                if (!this.config.IsAllowedNamespace(ns))
-                {
-                    throw new ForbiddenException($"namespace: {ns}");
-                }
-
                 var podList = await this.client.ListNamespacedPodAsync(ns);
                 var list = new List<PodInfo>(podList.Items.Count);
                 foreach (var item in podList.Items)
