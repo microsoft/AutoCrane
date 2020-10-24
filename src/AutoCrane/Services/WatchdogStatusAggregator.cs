@@ -29,8 +29,8 @@ namespace AutoCrane.Services
 
         public string MoreCriticalStatus(string s1, string s2)
         {
-            var s1v = this.StatusWeight(s1);
-            var s2v = this.StatusWeight(s2);
+            var s1v = StatusWeight(s1);
+            var s2v = StatusWeight(s2);
 
             if (s1v >= s2v)
             {
@@ -40,19 +40,15 @@ namespace AutoCrane.Services
             return s2;
         }
 
-        private int StatusWeight(string s2)
+        private static int StatusWeight(string s2)
         {
-            switch (s2.ToLowerInvariant())
+            return s2.ToLowerInvariant() switch
             {
-                case "error":
-                    return 3;
-                case "warning":
-                    return 2;
-                case "info":
-                    return 1;
-                default:
-                    return 0;
-            }
+                "error" => 3,
+                "warning" => 2,
+                "info" => 1,
+                _ => 0,
+            };
         }
     }
 }

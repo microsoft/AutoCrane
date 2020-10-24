@@ -29,6 +29,8 @@ namespace AutoCrane
             services.AddSingleton<IPodEvicter, PodEvicter>();
             services.AddSingleton<IKubernetesConfigProvider, KubernetesConfigProvider>();
             services.AddSingleton<IWatchdogStatusAggregator, WatchdogStatusAggregator>();
+            services.AddSingleton<IConsecutiveHealthMonitor, ConsecutiveHealthMonitor>();
+            services.AddSingleton<IUptimeMonitor, UptimeMonitor>();
             services.AddSingleton<IPodGetter, PodGetter>();
             services.AddSingleton<IPodIdentifierFactory, PodIdentifierFactory>();
             services.AddSingleton<IAutoCraneConfig, AutoCraneConfig>();

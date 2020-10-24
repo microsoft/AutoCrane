@@ -39,8 +39,6 @@ namespace AutoCrane
                 stopwatch.Stop();
             }
 
-            this.logger.LogInformation($"{httpContext.Response.StatusCode} {stopwatch.ElapsedMilliseconds}ms '{httpContext.Response.ContentType ?? "null"}' {httpContext.Response.ContentLength ?? -1} {httpContext.Request.GetDisplayUrl()}");
-
             if (exceptionToReport != null)
             {
                 if (!httpContext.Response.HasStarted)
@@ -50,6 +48,10 @@ namespace AutoCrane
 
                 this.logger.LogError($"{httpContext.Response.StatusCode} {stopwatch.ElapsedMilliseconds}ms '{httpContext.Response.ContentType ?? "null"}' {httpContext.Response.ContentLength ?? -1} {httpContext.Request.GetDisplayUrl()} {exceptionToReport.ToString().Replace("\r", string.Empty, StringComparison.Ordinal).Replace("\n", "\\n", StringComparison.Ordinal)}");
                 throw exceptionToReport;
+            }
+            else
+            {
+                this.logger.LogInformation($"{httpContext.Response.StatusCode} {stopwatch.ElapsedMilliseconds}ms '{httpContext.Response.ContentType ?? "null"}' {httpContext.Response.ContentLength ?? -1} {httpContext.Request.GetDisplayUrl()}");
             }
         }
     }
