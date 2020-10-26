@@ -57,13 +57,8 @@ namespace AutoCrane.Apps
                         throw new ArgumentNullException(nameof(podOptions.Value.Name));
                     }
 
-                    if (!healthOptions.Value.AlwaysHealthyAfterSeconds.HasValue)
-                    {
-                        throw new ArgumentNullException(nameof(healthOptions.Value.AlwaysHealthyAfterSeconds));
-                    }
-
                     var uptime = uptimeMonitor.Uptime;
-                    if (uptime > TimeSpan.FromSeconds(alwaysHealthySeconds))
+                    if (alwaysHealthySeconds > 0 && uptime > TimeSpan.FromSeconds(alwaysHealthySeconds))
                     {
                         logger.LogInformation($"Uptime {uptime} surpassed {alwaysHealthySeconds}: success");
                         ctx.Response.StatusCode = 200;

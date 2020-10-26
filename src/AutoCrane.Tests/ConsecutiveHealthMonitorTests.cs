@@ -16,7 +16,7 @@ namespace AutoCrane.Tests
         {
             var requireSeconds = 20;
             var ctx = CreateTestContext();
-            ctx.Config = Options.Create(new WatchdogHealthzOptions() { RequireHealthyStatusForSeconds = requireSeconds });
+            ctx.Config = Options.Create(new WatchdogHealthzOptions() { MinReadySeconds = requireSeconds });
             var chm = new ConsecutiveHealthMonitor(ctx.Clock, ctx.WatchdogStatusGetter, ctx.Config);
 
             var pi = new PodIdentifier("a", "b");
