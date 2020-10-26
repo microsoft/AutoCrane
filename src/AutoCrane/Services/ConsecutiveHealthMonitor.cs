@@ -24,7 +24,7 @@ namespace AutoCrane.Services
             this.clock = clock;
             this.watchdogStatusGetter = watchdogStatusGetter;
             this.firstHealthyProbe = new Dictionary<PodIdentifier, DateTimeOffset>();
-            this.minTimeHealthy = TimeSpan.FromSeconds(options.Value.RequireHealthyStatusForSeconds.GetValueOrDefault());
+            this.minTimeHealthy = TimeSpan.FromSeconds(options.Value.MinReadySeconds.GetValueOrDefault());
         }
 
         public bool IsHealthy(PodIdentifier podid)

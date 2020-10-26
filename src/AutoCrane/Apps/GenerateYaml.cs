@@ -14,77 +14,6 @@ kind: Namespace
 metadata:
   name: !!NAMESPACE!!
 ---
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  namespace: !!NAMESPACE!!
-  name: pod-reader
-  labels:
-    app.kubernetes.io/name: autocrane
-    app.kubernetes.io/part-of: autocrane
-rules:
-- apiGroups: [""""]
-  resources: [""pods""]
-  verbs: [""get"", ""list""]
----
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  namespace: !!NAMESPACE!!
-  name: pod-reader-writer
-  labels:
-    app.kubernetes.io/name: autocrane
-    app.kubernetes.io/part-of: autocrane
-rules:
-- apiGroups: [""""]
-  resources: [""pods""]
-  verbs: [""get"", ""list"", ""patch""]
----
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  namespace: !!NAMESPACE!!
-  name: pod-eviction
-  labels:
-    app.kubernetes.io/name: autocrane
-    app.kubernetes.io/part-of: autocrane
-rules:
-- apiGroups: [""""]
-  resources: [""pods/eviction""]
-  verbs: [""create""]
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: pod-reader-writer-binding-autocrane
-  labels:
-    app.kubernetes.io/name: autocrane
-    app.kubernetes.io/part-of: autocrane
-subjects:
-- kind: ServiceAccount
-  name: autocrane
-  namespace: !!NAMESPACE!!
-roleRef:
-  kind: ClusterRole
-  name: pod-reader-writer
-  apiGroup: rbac.authorization.k8s.io
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: pod-eviction-binding
-  labels:
-    app.kubernetes.io/name: autocrane
-    app.kubernetes.io/part-of: autocrane
-subjects:
-- kind: ServiceAccount
-  name: autocrane
-  namespace: !!NAMESPACE!!
-roleRef:
-  kind: ClusterRole
-  name: pod-eviction
-  apiGroup: rbac.authorization.k8s.io
----
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -93,6 +22,79 @@ metadata:
   labels:
     app.kubernetes.io/name: autocrane
     app.kubernetes.io/part-of: autocrane
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: !!NAMESPACE!!
+  name: autocrane-pod-reader
+  labels:
+    app.kubernetes.io/name: autocrane
+    app.kubernetes.io/part-of: autocrane
+rules:
+- apiGroups: [""""]
+  resources: [""pods""]
+  verbs: [""get"", ""list""]
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: !!NAMESPACE!!
+  name: autocrane-pod-reader-writer
+  labels:
+    app.kubernetes.io/name: autocrane
+    app.kubernetes.io/part-of: autocrane
+rules:
+- apiGroups: [""""]
+  resources: [""pods""]
+  verbs: [""get"", ""list"", ""patch""]
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: !!NAMESPACE!!
+  name: autocrane-pod-eviction
+  labels:
+    app.kubernetes.io/name: autocrane
+    app.kubernetes.io/part-of: autocrane
+rules:
+- apiGroups: [""""]
+  resources: [""pods/eviction""]
+  verbs: [""create""]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: autocrane-pod-reader-writer-binding-autocrane
+  namespace: !!NAMESPACE!!
+  labels:
+    app.kubernetes.io/name: autocrane
+    app.kubernetes.io/part-of: autocrane
+subjects:
+- kind: ServiceAccount
+  name: autocrane
+  namespace: !!NAMESPACE!!
+roleRef:
+  kind: Role
+  name: autocrane-pod-reader-writer
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: autocrane-pod-eviction-binding-autocrane
+  namespace: !!NAMESPACE!!
+  labels:
+    app.kubernetes.io/name: autocrane
+    app.kubernetes.io/part-of: autocrane
+subjects:
+- kind: ServiceAccount
+  name: autocrane
+  namespace: !!NAMESPACE!!
+roleRef:
+  kind: Role
+  name: autocrane-pod-eviction
+  apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
@@ -135,7 +137,9 @@ spec:
           - name: AUTOCRANE_ARGS
             value: orchestrate
           - name: AutoCrane__Namespaces
-            value: !!AUTOCRANE_NAMESPACES!!
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
         resources:
           requests:
             cpu: 100m
@@ -156,10 +160,11 @@ metadata:
     app.kubernetes.io/name: watchdogprober
     app.kubernetes.io/part-of: autocrane
 ---
-kind: ClusterRoleBinding
+kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: pod-reader-writer-binding-watchdogprober
+  name: autocrane-pod-reader-writer-binding-watchdogprober
+  namespace: !!NAMESPACE!!
   labels:
     app.kubernetes.io/name: watchdogprober
     app.kubernetes.io/part-of: autocrane
@@ -168,8 +173,8 @@ subjects:
   name: watchdogprober
   namespace: !!NAMESPACE!!
 roleRef:
-  kind: ClusterRole
-  name: pod-reader-writer
+  kind: Role
+  name: autocrane-pod-reader-writer
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: apps/v1
@@ -202,7 +207,9 @@ spec:
           - name: AUTOCRANE_ARGS
             value: watchdogprober
           - name: AutoCrane__Namespaces
-            value: !!AUTOCRANE_NAMESPACES!!
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
         resources:
           requests:
             cpu: 100m
@@ -237,8 +244,8 @@ subjects:
   name: testworkload
   namespace: !!NAMESPACE!!
 roleRef:
-  kind: ClusterRole
-  name: pod-reader
+  kind: Role
+  name: autocrane-pod-reader
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: apps/v1
@@ -338,7 +345,6 @@ spec:
                 ["namespace"] = "autocrane",
                 ["image"] = "autocrane",
                 ["pull"] = "Never", // for local development
-                ["autocrane_namespaces"] = "autocrane", // namespaces to operate in
                 ["autocrane_replicas"] = "1",
                 ["watchdogprober_replicas"] = "1",
                 ["testworkload_replicas"] = "3",

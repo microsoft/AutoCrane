@@ -7,9 +7,6 @@ Another important feature is the concept of a data deployment. Applications ofte
 
 # AutoCrane Components
 
-AutoCrane is configured with Kubernetes Custom Resource Definitions (CRDs). The CRDs are:
-  - AutoCraneDeployment: A replicaSetSpec with data sources, rollout config, and failing limit config
-
 Components:
   - AutoCrane:
     - Asks VersionWatcher for latest app version and manages rollouts/rollbacks.
@@ -19,6 +16,7 @@ Components:
   - DataRepository: Asks VersionWatcher for new data versions, downloads locally, serves to cluster.
   - Get/Post Watchdog: A utility to get or post watchdog information.
   - VersionWatcher: Probes upstream sources for new app and data versions.
+  - TestWorkload: A program with a GET `/watchdog` endpoint which fails after you post to `/fail`.
   - WatchdogProber: Finds watchdog probe URLs by scanning pod annotations. Probes and updates watchdog status annotations/labels
   - WatchdogHealthz: Reads pod's watchdog annotations and provides a probe that succeeds/fails based on how long the pod has been in a healthy watchdog state.
 
@@ -39,9 +37,10 @@ For steady-state errors in applications which you would not want to cause a glob
 
 To block a deployment on watchdog failures we'll create a dummy sidecar pod that maps watchdog errors to a readiness probe.
 The catch is that we don't want to fail the readiness probe after the deployment is complete, because that will hurt availability.
+So the approach is to have a canary deployment with this sidecar and a regular deployment without the sidecar.
+That way if the canary's readiness probes all fail, you can track it with an alert but won't have a large outage at once.
 
-  - Take note of deployment.spec.progressDeadlineSeconds and deployment.spec.minReadySeconds.
-  - Add a sidecar container to your pod using the AutoCrane image and watchdoghealthz function:
+  - Sample sidecar for canary deployment:
 ```
       - name: watchdoghealthz
         image: <autocrane>
@@ -50,8 +49,8 @@ The catch is that we don't want to fail the readiness probe after the deployment
             value: watchdoghealthz
           - name: LISTEN_PORT
             value: "8081"
-          - name: Watchdogs__AlwaysHealthyAfterSeconds
-            value: <set to deployment.spec.progressDeadlineSeconds>
+          - name: Watchdogs__MinReadySeconds
+            value: <MinReadySeconds>
           - name: Pod__Name
             valueFrom:
               fieldRef:
@@ -66,6 +65,9 @@ The catch is that we don't want to fail the readiness probe after the deployment
             port: 8081
           failureThreshold: 1
 ```
+
+Values
+  - MinReadySeconds: how long it would take for watchdog failures to be posted--keep the pod in non-ready state until then.
 
 # Setup
 
