@@ -25,7 +25,7 @@ namespace AutoCrane.Apps
         private readonly IAutoCraneConfig config;
         private readonly IPodGetter podGetter;
         private readonly IWatchdogStatusPutter watchdogStatusPutter;
-        private readonly ILogger<Orchestrator> logger;
+        private readonly ILogger<WatchdogProber> logger;
         private readonly HttpClient httpClient;
 
         public WatchdogProber(IAutoCraneConfig config, ILoggerFactory loggerFactory, IPodGetter podGetter, IWatchdogStatusPutter watchdogStatusPutter)
@@ -33,7 +33,7 @@ namespace AutoCrane.Apps
             this.config = config;
             this.podGetter = podGetter;
             this.watchdogStatusPutter = watchdogStatusPutter;
-            this.logger = loggerFactory.CreateLogger<Orchestrator>();
+            this.logger = loggerFactory.CreateLogger<WatchdogProber>();
             this.httpClient = new HttpClient();
         }
 

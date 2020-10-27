@@ -67,6 +67,13 @@ namespace AutoCrane
                     case "yaml":
                         return GenerateYaml.Run(newargs);
 
+                    case "datadeployinit":
+                        return DependencyInjection.GetServiceProvider(newargs).GetRequiredService<DataDeployInit>().RunAsync().GetAwaiter().GetResult();
+
+                    case "datadeploy":
+                        WebHosting.RunWebService<DataDeployer>(newargs);
+                        return 0;
+
                     default:
                         Console.Error.WriteLine($"Mode {mode} not found");
                         return 1;

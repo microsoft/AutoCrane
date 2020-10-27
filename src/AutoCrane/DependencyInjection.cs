@@ -36,12 +36,14 @@ namespace AutoCrane
             services.AddSingleton<IAutoCraneConfig, AutoCraneConfig>();
             services.AddSingleton<IClock, DefaultClock>();
             services.AddSingleton<IMonkeyWorkload, MonkeyWorkload>();
+            services.AddSingleton<IDataDownloader, DataDownloader>();
 
             services.AddSingleton<KubernetesClient>();
             services.AddSingleton<WatchdogProber>();
             services.AddSingleton<GetWatchdogService>();
             services.AddSingleton<PostWatchdogService>();
             services.AddSingleton<Orchestrator>();
+            services.AddSingleton<DataDeployInit>();
             services.AddLogging(logging =>
             {
                 logging.ClearProviders();

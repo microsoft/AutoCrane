@@ -265,10 +265,34 @@ spec:
     metadata:
       annotations:
         probe.autocrane.io/watchdog1: POD_IP:8080/watchdog
+        store.autocrane.io/location: /data
+        store.autocrane.io/url: http://datarepository
+        data.autocrane.io/data1: git:https://github.com/microsoft/AutoCrane.git
       labels:
         app.kubernetes.io/name: testworkload
         app.kubernetes.io/part-of: autocrane
     spec:
+      volumes:
+          - name: test-volume
+            emptyDir: {}
+      initContainers:
+          - name: setup-vol-1
+            image: !!IMAGE!!
+            imagePullPolicy: !!PULL!!
+            volumeMounts:
+                - mountPath: /data
+                  name: test-volume
+            env:
+              - name: AUTOCRANE_ARGS
+                value: datadeployinit
+              - name: Pod__Name
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
+              - name: Pod__Namespace
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
       containers:
       - name: testworkload
         image: !!IMAGE!!
@@ -301,6 +325,23 @@ spec:
           initialDelaySeconds: 10
           periodSeconds: 15
           timeoutSeconds: 10
+      - name: data
+        image: !!IMAGE!!
+        imagePullPolicy: !!PULL!!
+        volumeMounts:
+            - mountPath: /data
+                name: test-volume
+        env:
+          - name: AUTOCRANE_ARGS
+            value: datadeploy
+          - name: Pod__Name
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: Pod__Namespace
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
       - name: watchdoghealthz
         image: !!IMAGE!!
         imagePullPolicy: !!PULL!!

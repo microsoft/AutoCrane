@@ -5,21 +5,34 @@ AutoCrane is a Kubernetes operator that helps you safely ship container services
 
 Another important feature is the concept of a data deployment. Applications often depend on data or configuration files. For applications that take a long time to start, we would prefer to update this data in a safe manner without restarting the application. Updating one of the data sources is called a data deployment. One might expect to see a new data deployment happening every couple of minutes, and turning these into application deployments would not be desirable due to extra resources consumed during application startup.
 
-# AutoCrane Components
+# AutoCrane
 
-Components:
+## Components
   - AutoCrane:
-    - Asks VersionWatcher for latest app version and manages rollouts/rollbacks.
-    - Asks DataRepository for latest synced data and tells DataDeployer what version of data to sync.
+    - Asks DataRepository for data versions and tells pods/DataDeployer what version of data to sync.
     - Calls Eviction API on pods with watchdog failures.
   - DataDeployer: an init and sidecar container for downloading data from DataRepository
-  - DataRepository: Asks VersionWatcher for new data versions, downloads locally, serves to cluster.
+  - DataRepository: Probes for new data versions, downloads locally, serves version info and data to cluster.
   - Get/Post Watchdog: A utility to get or post watchdog information.
-  - VersionWatcher: Probes upstream sources for new app and data versions.
   - TestWorkload: A program with a GET `/watchdog` endpoint which fails after you post to `/fail`.
   - WatchdogProber: Finds watchdog probe URLs by scanning pod annotations. Probes and updates watchdog status annotations/labels
   - WatchdogHealthz: Reads pod's watchdog annotations and provides a probe that succeeds/fails based on how long the pod has been in a healthy watchdog state.
 
+## Annotations and Labels
+
+AutoCrane components consumes the following pod annotations set by you:
+  - `probe.autocrane.io/NAME: POD_IP:1234/url` For WatchdogProber: Sets up a watchdog called `NAME` by probing `http://POD_IP:1234/url`
+  - `store.autocrane.io/url: http://datarepository` For DataDeployer: Sets the url for the data repository.
+  - `store.autocrane.io/location: /data` For DataDeployer: Sets where data is downloaded to.
+  - `data.autocrane.io/NAME: git:https://github.com/microsoft/AutoCrane.git` For DataRepository: Sets up a git data deployment called `NAME`.
+
+AutoCrane components set the following annotations for storing state:
+  - `status.autocrane.io/NAME: <level>/timestamp/message` A watchdog status annotation
+  - `request.data.autocrane.io/NAME: data` Stores AutoCrane's request for data deployment `NAME`. Read by DataDeployer.
+  - `status.data.autocrane.io/NAME: data` Stores DataDeployer status for data deployment `NAME`. Read by AutoCrane.
+
+AutoCrane components set the following pod labels for convenient querying:
+  - `status.autocrane.io/health: error`: Updated when watchdogs are written to make it easier to find failing pods
 
 # Patterns
 

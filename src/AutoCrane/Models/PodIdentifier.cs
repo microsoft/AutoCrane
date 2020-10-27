@@ -46,5 +46,10 @@ namespace AutoCrane.Models
         {
             return HashCode.Combine(this.Name.GetHashCode(), this.Namespace.GetHashCode());
         }
+
+        public override string ToString()
+        {
+            return $"{this.Namespace}/{this.Name}";
+        }
     }
 }
