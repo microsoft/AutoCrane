@@ -24,7 +24,8 @@ AutoCrane components consumes the following pod annotations set by you:
   - `probe.autocrane.io/NAME: POD_IP:1234/url` For WatchdogProber: Sets up a watchdog called `NAME` by probing `http://POD_IP:1234/url`
   - `store.autocrane.io/url: http://datarepository` For DataDeployer: Sets the url for the data repository.
   - `store.autocrane.io/location: /data` For DataDeployer: Sets where data is downloaded to.
-  - `data.autocrane.io/NAME: git:https://github.com/microsoft/AutoCrane.git` For DataRepository: Sets up a git data deployment called `NAME`.
+  - `data.autocrane.io/NAME: srcname` For DataDeployer: Sets up a pod-local data deployment called `NAME`.
+  - `data.autocrane.io/srcname: git:https://github.com/microsoft/AutoCrane.git` For DataRepository: Sets up a source and the spec for where it comes from.
 
 AutoCrane components set the following annotations for storing state:
   - `status.autocrane.io/NAME: <level>/timestamp/message` A watchdog status annotation

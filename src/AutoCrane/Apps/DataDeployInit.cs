@@ -19,18 +19,16 @@ namespace AutoCrane.Apps
         private const int ConsecutiveErrorCountBeforeExiting = 5;
         private readonly HttpClient httpClient;
         private readonly IAutoCraneConfig config;
-        private readonly IPodGetter podGetter;
         private readonly IDataDownloader dataDownloader;
+        private readonly IDataDownloadRequestFactory downloadRequestFactory;
         private readonly ILogger<DataDeployInit> logger;
-        private readonly PodIdentifierOptions podIdentifier;
 
-        public DataDeployInit(IAutoCraneConfig config, ILoggerFactory loggerFactory, IPodGetter podGetter, IOptions<PodIdentifierOptions> podOptions, IDataDownloader dataDownloader)
+        public DataDeployInit(IAutoCraneConfig config, ILoggerFactory loggerFactory, IDataDownloader dataDownloader, IDataDownloadRequestFactory downloadRequestFactory)
         {
             this.config = config;
-            this.podGetter = podGetter;
             this.dataDownloader = dataDownloader;
+            this.downloadRequestFactory = downloadRequestFactory;
             this.logger = loggerFactory.CreateLogger<DataDeployInit>();
-            this.podIdentifier = podOptions.Value;
             this.httpClient = new HttpClient();
         }
 
@@ -43,29 +41,10 @@ namespace AutoCrane.Apps
                 {
                     var sw = Stopwatch.StartNew();
 
-                    this.logger.LogInformation($"Getting pod info {this.podIdentifier.Identifier}");
-                    var podInfo = await this.podGetter.GetPodAsync(this.podIdentifier.Identifier);
-
-                    this.logger.LogInformation($"Getting {CommonAnnotations.DataStoreLocation}");
-                    var storeLocation = podInfo.Annotations.First(pi => pi.Key == CommonAnnotations.DataStoreLocation).Value;
-                    this.logger.LogInformation($"Getting {CommonAnnotations.DataStoreUrl}");
-                    var storeUrl = podInfo.Annotations.First(pi => pi.Key == CommonAnnotations.DataStoreUrl).Value;
-
-                    var dataToGet = podInfo.Annotations.Where(pi => pi.Key.StartsWith(CommonAnnotations.DataDeploymentPrefix)).ToList();
-
-                    foreach (var dataDeployment in dataToGet)
+                    var requests = await this.downloadRequestFactory.GetPodRequestsAsync();
+                    foreach (var request in requests)
                     {
-                        var name = dataDeployment.Key.Substring(CommonAnnotations.DataDeploymentPrefix.Length);
-                        var splits = dataDeployment.Value.Split(':', 2);
-                        if (splits.Length != 2)
-                        {
-                            this.logger.LogError($"Invalid data deployment spec: {dataDeployment.Key}: {dataDeployment.Value}");
-                        }
-
-                        var method = splits[0];
-                        var sourceRef = splits[1];
-
-                        await this.dataDownloader.DownloadAsync(name, method, sourceRef, storeUrl, storeLocation);
+                        await this.dataDownloader.DownloadAsync(request);
                     }
 
                     sw.Stop();

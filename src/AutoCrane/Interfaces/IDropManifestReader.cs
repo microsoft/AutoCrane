@@ -1,13 +1,14 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-using System.Threading.Tasks;
+using System;
+using System.Collections.Generic;
 using AutoCrane.Models;
 
 namespace AutoCrane.Interfaces
 {
-    public interface IDataDownloader
+    public interface IDropManifestReader : IDisposable
     {
-        Task<DataDownloadResult> DownloadAsync(DataDownloadRequest request);
+        IEnumerable<DropManifestEntry> Read();
     }
 }
