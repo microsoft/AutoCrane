@@ -8,6 +8,6 @@ namespace AutoCrane.Interfaces
 {
     public interface IDataDownloader
     {
-        Task<DataDownloadResult> DownloadAsync(DataDownloadRequest request);
+        Task DownloadAsync(DataDownloadRequest request);
     }
 }

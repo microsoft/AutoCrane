@@ -3,59 +3,68 @@
 
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 using AutoCrane.Interfaces;
 using AutoCrane.Models;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace AutoCrane.Apps
 {
     public sealed class DataDeployInit
     {
         private const int ConsecutiveErrorCountBeforeExiting = 5;
-        private readonly HttpClient httpClient;
-        private readonly IAutoCraneConfig config;
         private readonly IDataDownloader dataDownloader;
         private readonly IDataDownloadRequestFactory downloadRequestFactory;
+        private readonly IDataLinker dataLinker;
+        private readonly IPodAnnotationPutter annotationPutter;
         private readonly ILogger<DataDeployInit> logger;
 
-        public DataDeployInit(IAutoCraneConfig config, ILoggerFactory loggerFactory, IDataDownloader dataDownloader, IDataDownloadRequestFactory downloadRequestFactory)
+        public DataDeployInit(ILoggerFactory loggerFactory, IDataDownloader dataDownloader, IDataDownloadRequestFactory downloadRequestFactory, IDataLinker dataLinker, IPodAnnotationPutter annotationPutter)
         {
-            this.config = config;
             this.dataDownloader = dataDownloader;
             this.downloadRequestFactory = downloadRequestFactory;
+            this.dataLinker = dataLinker;
+            this.annotationPutter = annotationPutter;
             this.logger = loggerFactory.CreateLogger<DataDeployInit>();
-            this.httpClient = new HttpClient();
         }
 
         public async Task<int> RunAsync(int iterations = int.MaxValue)
         {
-            var errorCount = 0;
-            while (errorCount < ConsecutiveErrorCountBeforeExiting)
+            while (iterations-- > 0)
             {
-                try
-                {
-                    var sw = Stopwatch.StartNew();
+                var errorCount = 0;
 
-                    var requests = await this.downloadRequestFactory.GetPodRequestsAsync();
-                    foreach (var request in requests)
+                while (errorCount < ConsecutiveErrorCountBeforeExiting)
+                {
+                    try
                     {
-                        await this.dataDownloader.DownloadAsync(request);
-                    }
+                        var requests = await this.downloadRequestFactory.GetPodRequestsAsync();
+                        if (!requests.Any())
+                        {
+                            this.logger.LogInformation($"Waiting for requests...");
+                            break;
+                        }
 
-                    sw.Stop();
-                    this.logger.LogInformation($"Done in {sw.Elapsed}");
-                    iterations--;
-                    errorCount = 0;
-                }
-                catch (Exception e)
-                {
-                    this.logger.LogError($"Unhandled exception: {e}");
-                    errorCount++;
+                        this.logger.LogInformation($"Got {requests.Count} requets...");
+                        var sw = Stopwatch.StartNew();
+                        foreach (var request in requests)
+                        {
+                            await this.dataDownloader.DownloadAsync(request);
+                            await this.dataLinker.LinkAsync(Path.Combine(request.StoreLocation, request.SourceRef), Path.Combine(request.StoreLocation, request.Name));
+                            await this.annotationPutter.PutPodAnnotationAsync($"{CommonAnnotations.DataStatusPrefix}/{request.Name}", $"{request.HashToMatch}/{request.SourceRef}");
+                        }
+
+                        sw.Stop();
+                        this.logger.LogInformation($"Done in {sw.Elapsed}");
+                        return 0;
+                    }
+                    catch (Exception e)
+                    {
+                        this.logger.LogError($"Unhandled exception: {e}");
+                        errorCount++;
+                    }
                 }
             }
 

@@ -39,16 +39,18 @@ namespace AutoCrane.Services
             this.logger.LogInformation($"Getting {CommonAnnotations.DataStoreUrl}");
             var storeUrl = podInfo.Annotations.First(pi => pi.Key == CommonAnnotations.DataStoreUrl).Value;
 
-            var dataToGet = podInfo.Annotations.Where(pi => pi.Key.StartsWith(CommonAnnotations.DataDeploymentPrefix)).ToList();
+            var dataToGet = podInfo.Annotations.Where(pi => pi.Key.StartsWith(CommonAnnotations.DataRequestPrefix)).ToList();
 
             var list = new List<DataDownloadRequest>();
 
             foreach (var dataDeployment in dataToGet)
             {
-                var name = dataDeployment.Key.Substring(CommonAnnotations.DataDeploymentPrefix.Length);
-                var sourceRef = dataDeployment.Value;
-
-                list.Add(new DataDownloadRequest(pod, name, storeUrl, storeLocation, sourceRef));
+                var name = dataDeployment.Key.Substring(CommonAnnotations.DataRequestPrefix.Length);
+                var splits = dataDeployment.Value.Split('/', 2);
+                if (splits.Length == 2)
+                {
+                    list.Add(new DataDownloadRequest(pod, name, storeUrl, storeLocation, sourceRef: splits[1], hashToMatch: splits[0]));
+                }
             }
 
             return list;

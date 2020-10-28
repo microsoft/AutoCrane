@@ -8,6 +8,8 @@ namespace AutoCrane.Interfaces
 {
     public interface IPodAnnotationPutter
     {
+        Task PutPodAnnotationAsync(string name, string val);
+
         Task PutPodAnnotationAsync(PodIdentifier pod, string name, string val);
     }
 }
