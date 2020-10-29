@@ -36,8 +36,6 @@ namespace AutoCrane.Services
 
             this.logger.LogInformation($"Getting {CommonAnnotations.DataStoreLocation}");
             var storeLocation = podInfo.Annotations.First(pi => pi.Key == CommonAnnotations.DataStoreLocation).Value;
-            this.logger.LogInformation($"Getting {CommonAnnotations.DataStoreUrl}");
-            var storeUrl = podInfo.Annotations.First(pi => pi.Key == CommonAnnotations.DataStoreUrl).Value;
 
             var dataToGet = podInfo.Annotations.Where(pi => pi.Key.StartsWith(CommonAnnotations.DataRequestPrefix)).ToList();
 
@@ -46,10 +44,10 @@ namespace AutoCrane.Services
             foreach (var dataDeployment in dataToGet)
             {
                 var name = dataDeployment.Key.Substring(CommonAnnotations.DataRequestPrefix.Length);
-                var splits = dataDeployment.Value.Split('/', 2);
-                if (splits.Length == 2)
+                var splits = dataDeployment.Value.Split('/', 3);
+                if (splits.Length == 3)
                 {
-                    list.Add(new DataDownloadRequest(pod, name, storeUrl, storeLocation, sourceRef: splits[1], hashToMatch: splits[0]));
+                    list.Add(new DataDownloadRequest(pod, name, storeUrl: splits[2], storeLocation, sourceRef: splits[1], hashToMatch: splits[0]));
                 }
             }
 

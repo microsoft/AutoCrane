@@ -66,6 +66,7 @@ namespace AutoCrane
             services.Configure<KubernetesConfig>(configuration.GetSection("Kubeconfig"));
             services.Configure<AutoCraneOptions>(configuration.GetSection("AutoCrane"));
             services.Configure<WatchdogHealthzOptions>(configuration.GetSection("Watchdogs"));
+            services.Configure<DataRepoOptions>(configuration.GetSection("DataRepo"));
         }
 
         internal static ServiceProvider GetServiceProvider(string[] args)

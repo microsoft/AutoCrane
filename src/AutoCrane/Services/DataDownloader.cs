@@ -40,7 +40,7 @@ namespace AutoCrane.Services
 
 #endif
             var dropLocation = Path.Combine(request.StoreLocation, request.SourceRef);
-            var dropArchive = dropLocation + ".tar.xz";
+            var dropArchive = dropLocation + ".tar";
             this.logger.LogInformation($"Checking if already downloaded to {dropLocation}");
             if (Directory.Exists(dropLocation) && !File.Exists(dropArchive))
             {
@@ -50,7 +50,7 @@ namespace AutoCrane.Services
             {
                 try
                 {
-                    var dropUrl = $"{request.StoreUrl}/{request.SourceRef}";
+                    var dropUrl = $"http://{request.StoreUrl}/{request.SourceRef}";
                     this.logger.LogInformation($"Downloading {dropUrl} to {dropLocation}");
                     var data = await this.client.GetAsync(dropUrl);
                     data.EnsureSuccessStatusCode();
