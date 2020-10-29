@@ -4,12 +4,15 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using AutoCrane.Interfaces;
+using AutoCrane.Models;
 using AutoCrane.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace AutoCrane.Apps
 {
@@ -31,19 +34,36 @@ namespace AutoCrane.Apps
             {
                 endpoints.MapGet("/ping", (ctx) =>
                 {
+                    var opts = ctx.RequestServices.GetRequiredService<IOptions<DataRepoOptions>>();
+                    var heartbeat = ctx.RequestServices.GetRequiredService<IServiceHeartbeat>();
+                    var lastDataRepoCrawl = heartbeat.GetLastBeat(nameof(DataRepositoryCrawler));
+                    if (!lastDataRepoCrawl.HasValue || lastDataRepoCrawl.Value > DataRepositoryCrawler.HeartbeatTimeout)
+                    {
+                        ctx.Response.StatusCode = 500;
+                        return ctx.Response.WriteAsync("crawler not running");
+                    }
+
+                    if (string.IsNullOrEmpty(opts.Value.Path))
+                    {
+                        ctx.Response.StatusCode = 500;
+                        return ctx.Response.WriteAsync("path not set");
+                    }
+
+                    if (!Directory.Exists(opts.Value.Path))
+                    {
+                        ctx.Response.StatusCode = 500;
+                        return ctx.Response.WriteAsync("path does not exist");
+                    }
+
                     return ctx.Response.WriteAsync("ok");
                 });
 
-                var fileRoot = Environment.GetEnvironmentVariable("FILE_ROOT");
-                if (string.IsNullOrEmpty(fileRoot))
-                {
-                    throw new ArgumentNullException("FILE_ROOT not set");
-                }
-
                 endpoints.MapGet("/{file}", (ctx) =>
                 {
+                    var opts = ctx.RequestServices.GetRequiredService<IOptions<DataRepoOptions>>();
                     var file = ctx.Request.RouteValues["file"]?.ToString();
-                    if (file is null)
+                    var fileRoot = opts.Value.Path;
+                    if (file is null || fileRoot is null)
                     {
                         ctx.Response.StatusCode = 400;
                         return Task.CompletedTask;

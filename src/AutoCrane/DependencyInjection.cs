@@ -37,8 +37,11 @@ namespace AutoCrane
             services.AddSingleton<IClock, DefaultClock>();
             services.AddSingleton<IMonkeyWorkload, MonkeyWorkload>();
             services.AddSingleton<IDataDownloader, DataDownloader>();
+            services.AddSingleton<IDataLinker, DataLinker>();
             services.AddSingleton<IDataDownloadRequestFactory, DataDownloadRequestFactory>();
             services.AddSingleton<IDropManifestReaderFactory, DropManifestReaderFactory>();
+            services.AddSingleton<IServiceHeartbeat, ServiceHeartbeat>();
+            services.AddSingleton<IDataRepositorySyncer, DataRepositorySyncer>();
 
             services.AddSingleton<KubernetesClient>();
             services.AddSingleton<WatchdogProber>();

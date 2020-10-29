@@ -6,5 +6,7 @@ namespace AutoCrane.Models
     public sealed class DataRepoOptions
     {
         public string? Path { get; set; }
+
+        public string? Sources { get; set; }
     }
 }

@@ -329,7 +329,7 @@ spec:
         imagePullPolicy: !!PULL!!
         volumeMounts:
             - mountPath: /data
-                name: test-volume
+              name: test-volume
         env:
           - name: AUTOCRANE_ARGS
             value: datadeploy
@@ -434,7 +434,7 @@ spec:
         imagePullPolicy: !!PULL!!
         volumeMounts:
             - mountPath: /data
-                name: data-store
+              name: data-store
         ports:
         - containerPort: 8080
           name: http
