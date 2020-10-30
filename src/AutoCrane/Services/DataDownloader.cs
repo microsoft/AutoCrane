@@ -2,10 +2,10 @@
 // Licensed under the MIT license.
 
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoCrane.Interfaces;
 using AutoCrane.Models;
@@ -17,11 +17,13 @@ namespace AutoCrane.Services
     {
         private readonly HttpClient client;
         private readonly ILogger<DataDownloader> logger;
+        private readonly IProcessRunner runner;
 
-        public DataDownloader(ILoggerFactory loggerFactory)
+        public DataDownloader(ILoggerFactory loggerFactory, IProcessRunner runner)
         {
             this.client = new HttpClient();
             this.logger = loggerFactory.CreateLogger<DataDownloader>();
+            this.runner = runner;
         }
 
         public async Task DownloadAsync(DataDownloadRequest request)
@@ -39,27 +41,26 @@ namespace AutoCrane.Services
             }
 
 #endif
-            var dropLocation = Path.Combine(request.StoreLocation, request.SourceRef);
-            var dropArchive = dropLocation + ".tar";
-            this.logger.LogInformation($"Checking if already downloaded to {dropLocation}");
-            if (Directory.Exists(dropLocation) && !File.Exists(dropArchive))
+            var dropArchive = Path.Combine(request.DataDropFolder, request.HashToMatch);
+            this.logger.LogInformation($"Checking if already downloaded to {dropArchive}");
+            if (!File.Exists(dropArchive))
             {
-                this.logger.LogInformation($"Already downloaded to {dropLocation}");
+                this.logger.LogInformation($"Already downloaded to {dropArchive}");
             }
             else
             {
                 try
                 {
-                    var dropUrl = $"http://{request.StoreUrl}/{request.SourceRef}";
-                    this.logger.LogInformation($"Downloading {dropUrl} to {dropLocation}");
+                    var dropUrl = $"http://{request.DataRepositoryHostname}/{request.DataRepositoryFilename}";
+                    this.logger.LogInformation($"Downloading {dropUrl} to {dropArchive}");
                     var data = await this.client.GetAsync(dropUrl);
                     data.EnsureSuccessStatusCode();
                     using var fs = new FileStream(dropArchive, FileMode.CreateNew);
                     await data.Content.CopyToAsync(fs);
                     fs.Close();
                     await VerifyHashAsync(dropArchive, request.HashToMatch);
-                    await this.ExtractArchiveAsync(dropArchive, dropLocation);
-                    File.Delete(dropArchive);
+                    this.logger.LogInformation($"Downloading {dropArchive} to {request.ExtractionLocation}");
+                    await this.ExtractArchiveAsync(dropArchive, request.ExtractionLocation, CancellationToken.None);
                 }
                 catch (Exception e)
                 {
@@ -71,9 +72,9 @@ namespace AutoCrane.Services
                         File.Delete(dropArchive);
                     }
 
-                    if (Directory.Exists(dropLocation))
+                    if (Directory.Exists(request.ExtractionLocation))
                     {
-                        Directory.Delete(dropLocation, recursive: true);
+                        Directory.Delete(request.ExtractionLocation, recursive: true);
                     }
 
                     throw;
@@ -93,25 +94,10 @@ namespace AutoCrane.Services
             }
         }
 
-        private Task ExtractArchiveAsync(string dropArchive, string dropLocation)
+        private async Task ExtractArchiveAsync(string dropArchive, string dropLocation, CancellationToken token)
         {
-            using (var process = new Process()
-            {
-                StartInfo = new ProcessStartInfo()
-                {
-                    FileName = "/bin/tar",
-                },
-            })
-            {
-                process.StartInfo.ArgumentList.Add("-x");
-                process.StartInfo.ArgumentList.Add("-C");
-                process.StartInfo.ArgumentList.Add(dropLocation);
-                process.StartInfo.ArgumentList.Add("-f");
-                process.StartInfo.ArgumentList.Add(dropArchive);
-                process.Start();
-                this.logger.LogInformation($"Running: tar -x -C {dropLocation} -f {dropArchive}");
-                return process.WaitForExitAsync();
-            }
+            var result = await this.runner.RunAsync("/bin/tar", null, new string[] { "-x", "-C", dropLocation, "-f", dropArchive }, token);
+            result.ThrowIfFailed();
         }
     }
 }

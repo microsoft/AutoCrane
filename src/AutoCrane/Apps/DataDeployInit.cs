@@ -52,8 +52,8 @@ namespace AutoCrane.Apps
                         foreach (var request in requests)
                         {
                             await this.dataDownloader.DownloadAsync(request);
-                            await this.dataLinker.LinkAsync(Path.Combine(request.StoreLocation, request.SourceRef), Path.Combine(request.StoreLocation, request.Name));
-                            await this.annotationPutter.PutPodAnnotationAsync($"{CommonAnnotations.DataStatusPrefix}/{request.Name}", $"{request.HashToMatch}/{request.SourceRef}");
+                            await this.dataLinker.LinkAsync(Path.Combine(request.DataDropFolder, request.DataRepositoryFilename), Path.Combine(request.DataDropFolder, request.Name));
+                            await this.annotationPutter.PutPodAnnotationAsync($"{CommonAnnotations.DataStatusPrefix}/{request.Name}", $"{request.HashToMatch}/{request.DataRepositoryFilename}");
                         }
 
                         sw.Stop();

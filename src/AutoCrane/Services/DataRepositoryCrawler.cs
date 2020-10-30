@@ -71,7 +71,7 @@ namespace AutoCrane.Services
             while (!stoppingToken.IsCancellationRequested)
             {
                 var success = true;
-                var sourceList = new List<DataRepositorySource>();
+                var sourceList = new Dictionary<string, IReadOnlyList<DataRepositorySource>>();
                 foreach (var repo in sources)
                 {
                     if (stoppingToken.IsCancellationRequested)
@@ -84,7 +84,7 @@ namespace AutoCrane.Services
                         var fullArchivePath = Path.Combine(archivePath, repo.Key);
                         Directory.CreateDirectory(fullArchivePath);
                         var newSources = await this.repoSyncer.SyncRepoAsync(sourcePath, fullArchivePath, repo.Value, stoppingToken);
-                        sourceList.AddRange(newSources);
+                        sourceList[repo.Key] = newSources;
                     }
                     catch (Exception e)
                     {
@@ -95,7 +95,7 @@ namespace AutoCrane.Services
 
                 try
                 {
-                    this.manifestWriter.Write(archivePath, sourceList);
+                    this.manifestWriter.Write(sourceList);
                 }
                 catch (Exception e)
                 {

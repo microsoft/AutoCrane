@@ -7,10 +7,8 @@ using AutoCrane.Models;
 
 namespace AutoCrane.Interfaces
 {
-    public interface IDataRepositoryManifestWriter
+    public interface IPodDataRequestGetter
     {
-        string ManifestFilePath { get; }
-
-        void Write(IReadOnlyDictionary<string, IReadOnlyList<DataRepositorySource>> sources);
+        Task<IReadOnlyList<PodDataRequestInfo>> GetAsync(string ns);
     }
 }

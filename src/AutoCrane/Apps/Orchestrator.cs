@@ -20,13 +20,15 @@ namespace AutoCrane.Apps
         private readonly IAutoCraneConfig config;
         private readonly IFailingPodGetter failingPodGetter;
         private readonly IPodEvicter podEvicter;
+        private readonly IPodDataRequestGetter podGetter;
         private readonly ILogger<Orchestrator> logger;
 
-        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter)
+        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter, IPodDataRequestGetter podGetter)
         {
             this.config = config;
             this.failingPodGetter = failingPodGetter;
             this.podEvicter = podEvicter;
+            this.podGetter = podGetter;
             this.logger = loggerFactory.CreateLogger<Orchestrator>();
         }
 
@@ -51,6 +53,8 @@ namespace AutoCrane.Apps
 
                 try
                 {
+                    await this.ProcessDataRequestsAsync(this.config.Namespaces);
+
                     var thisIterationFailingPods = new List<PodIdentifier>();
                     foreach (var ns in this.config.Namespaces)
                     {
@@ -92,6 +96,17 @@ namespace AutoCrane.Apps
             }
 
             return 0;
+        }
+
+        private async Task<IReadOnlyList<PodDataRequestInfo>> ProcessDataRequestsAsync(IEnumerable<string> namespaces)
+        {
+            var list = new List<PodDataRequestInfo>();
+            foreach (var ns in namespaces)
+            {
+                list.AddRange(await this.podGetter.GetAsync(ns));
+            }
+
+            return list;
         }
 
         private Task EvictPods(HashSet<PodIdentifier> pods)

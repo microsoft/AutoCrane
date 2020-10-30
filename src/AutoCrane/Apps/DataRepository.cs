@@ -58,6 +58,13 @@ namespace AutoCrane.Apps
                     return ctx.Response.WriteAsync("ok");
                 });
 
+                endpoints.MapGet("/.manifest", (ctx) =>
+                {
+                    var writer = ctx.RequestServices.GetRequiredService<IDataRepositoryManifestWriter>();
+                    using var fs = new FileStream(writer.ManifestFilePath, FileMode.Open);
+                    return fs.CopyToAsync(ctx.Response.Body);
+                });
+
                 endpoints.MapGet("/{source}/{ver}", (ctx) =>
                 {
                     var opts = ctx.RequestServices.GetRequiredService<IOptions<DataRepoOptions>>();

@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoCrane.Interfaces;
@@ -35,7 +36,7 @@ namespace AutoCrane.Services
             var podInfo = await this.podGetter.GetPodAsync(pod);
 
             this.logger.LogInformation($"Getting {CommonAnnotations.DataStoreLocation}");
-            var storeLocation = podInfo.Annotations.First(pi => pi.Key == CommonAnnotations.DataStoreLocation).Value;
+            var dropFolder = podInfo.Annotations.First(pi => pi.Key == CommonAnnotations.DataStoreLocation).Value;
 
             var dataToGet = podInfo.Annotations.Where(pi => pi.Key.StartsWith(CommonAnnotations.DataRequestPrefix)).ToList();
 
@@ -47,7 +48,9 @@ namespace AutoCrane.Services
                 var splits = dataDeployment.Value.Split('/', 3);
                 if (splits.Length == 3)
                 {
-                    list.Add(new DataDownloadRequest(pod, name, storeUrl: splits[2], storeLocation, sourceRef: splits[1], hashToMatch: splits[0]));
+                    var repoFilename = splits[1];
+                    var extractionLocation = repoFilename.Replace(Path.PathSeparator, '_');
+                    list.Add(new DataDownloadRequest(pod, name, repoHostname: splits[2], dropFolder: dropFolder, repoFilename: repoFilename, hashToMatch: splits[0], extractionLocation: extractionLocation));
                 }
             }
 
