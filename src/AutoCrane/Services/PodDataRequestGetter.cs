@@ -25,7 +25,7 @@ namespace AutoCrane.Services
             foreach (var pod in pods)
             {
                 var dataRequest = new PodDataRequestInfo(pod.Id, pod.Annotations);
-                if (dataRequest.ActiveRequests.Any())
+                if (dataRequest.InProgressRequests.Any())
                 {
                     result.Add(dataRequest);
                 }

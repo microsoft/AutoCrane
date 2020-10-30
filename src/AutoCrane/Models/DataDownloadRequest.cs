@@ -20,7 +20,7 @@ namespace AutoCrane.Models
 
             if (this.HashToMatch.Any(ch => char.IsLetterOrDigit(ch)))
             {
-                throw new ArgumentOutOfRangeException(nameof(this.HashToMatch));
+                throw new ArgumentOutOfRangeException(nameof(hashToMatch));
             }
         }
 
@@ -52,7 +52,7 @@ namespace AutoCrane.Models
         public string HashToMatch { get; }
 
         /// <summary>
-        /// The place to put the extracted archive
+        /// The place to put the extracted archive.
         /// </summary>
         public string ExtractionLocation { get; }
     }

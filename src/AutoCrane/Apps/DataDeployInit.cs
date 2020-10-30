@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoCrane.Interfaces;
 using AutoCrane.Models;
@@ -52,7 +53,7 @@ namespace AutoCrane.Apps
                         foreach (var request in requests)
                         {
                             await this.dataDownloader.DownloadAsync(request);
-                            await this.dataLinker.LinkAsync(Path.Combine(request.DataDropFolder, request.DataRepositoryFilename), Path.Combine(request.DataDropFolder, request.Name));
+                            await this.dataLinker.LinkAsync(Path.Combine(request.DataDropFolder, request.DataRepositoryFilename), Path.Combine(request.DataDropFolder, request.Name), CancellationToken.None);
                             await this.annotationPutter.PutPodAnnotationAsync($"{CommonAnnotations.DataStatusPrefix}/{request.Name}", $"{request.HashToMatch}/{request.DataRepositoryFilename}");
                         }
 

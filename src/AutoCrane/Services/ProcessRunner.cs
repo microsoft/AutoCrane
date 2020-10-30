@@ -21,61 +21,60 @@ namespace AutoCrane.Services
             this.logger = loggerFactory.CreateLogger<ProcessRunner>();
         }
 
-        public async Task<IProcessResult> RunAsync(string exe, string workingDir, string[] args, CancellationToken cancellationToken)
+        public async Task<IProcessResult> RunAsync(string exe, string? workingDir, string[] args, CancellationToken cancellationToken)
         {
             var result = new ProcessResult()
             {
                 Executable = exe,
             };
 
-            using (var process = new Process()
+            using var process = new Process()
             {
                 StartInfo = new ProcessStartInfo()
                 {
                     FileName = exe,
-                    WorkingDirectory = workingDir,
+                    WorkingDirectory = workingDir ?? string.Empty,
                     RedirectStandardError = true,
                     RedirectStandardOutput = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                 },
-            })
+            };
+
+            foreach (var arg in args)
             {
-                foreach (var arg in args)
-                {
-                    process.StartInfo.ArgumentList.Add(arg);
-                }
-
-                process.OutputDataReceived += (sender, eventArgs) =>
-                {
-                    var line = eventArgs.Data;
-                    if (line != null)
-                    {
-                        this.logger.LogInformation($"{exe}: {line}");
-                        result.OutputText.Add(line);
-                    }
-                };
-
-                process.ErrorDataReceived += (sender, eventArgs) =>
-                {
-                    var line = eventArgs.Data;
-                    if (line != null)
-                    {
-                        this.logger.LogError($"{exe}: {line}");
-                        result.ErrorText.Add(line);
-                    }
-                };
-
-                process.Start();
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
-
-                this.logger.LogInformation($"Running: {exe} {string.Join(' ', args.Select(a => $"\"{a}\""))}");
-                await process.WaitForExitAsync(cancellationToken);
-
-                result.ExitCode = process.ExitCode;
-                return result;
+                process.StartInfo.ArgumentList.Add(arg);
             }
+
+            process.OutputDataReceived += (sender, eventArgs) =>
+            {
+                var line = eventArgs.Data;
+                if (line != null)
+                {
+                    this.logger.LogInformation($"{exe}: {line}");
+                    result.OutputText.Add(line);
+                }
+            };
+
+            process.ErrorDataReceived += (sender, eventArgs) =>
+            {
+                var line = eventArgs.Data;
+                if (line != null)
+                {
+                    this.logger.LogError($"{exe}: {line}");
+                    result.ErrorText.Add(line);
+                }
+            };
+
+            process.Start();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+            this.logger.LogInformation($"Running: {exe} {string.Join(' ', args.Select(a => $"\"{a}\""))}");
+            await process.WaitForExitAsync(cancellationToken);
+
+            result.ExitCode = process.ExitCode;
+            return result;
         }
 
         private class ProcessResult : IProcessResult

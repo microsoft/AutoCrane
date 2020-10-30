@@ -32,6 +32,7 @@ namespace AutoCrane.Services
 
         public async Task<IReadOnlyList<DataRepositorySource>> FetchAsync(string url, string scratchDir, string archiveDropDir, CancellationToken token)
         {
+            this.logger.LogInformation($"FetchAsync {url} {scratchDir} {archiveDropDir}");
             if (Directory.Exists(Path.Combine(scratchDir, ".git")))
             {
                 await this.GitSyncAsync(url, scratchDir, token);
@@ -57,7 +58,7 @@ namespace AutoCrane.Services
                     await this.GitArchiveAsync(entry.Hash, scratchDir, archivePath, token);
                 }
 
-                list.Add(new DataRepositorySource(archivePath, DateTimeOffset.FromUnixTimeMilliseconds(entry.UnixTime)));
+                list.Add(new DataRepositorySource(archivePath, DateTimeOffset.FromUnixTimeSeconds(entry.UnixTime)));
             }
 
             return list;
@@ -65,10 +66,22 @@ namespace AutoCrane.Services
 
         private async Task GitArchiveAsync(string hash, string scratchDir, string archivePath, CancellationToken token)
         {
-            var result = await this.runner.RunAsync(GitExe, scratchDir, new string[] { "archive", "--format=tar", hash, "-o", archivePath }, token);
-            result.ThrowIfFailed();
-            result = await this.runner.RunAsync(ZstdExe, scratchDir, new string[] { "-19", archivePath }, token);
-            result.ThrowIfFailed();
+            var tmpFile = archivePath + ".tmp";
+
+            try
+            {
+                var result = await this.runner.RunAsync(GitExe, scratchDir, new string[] { "archive", "--format=tar", hash, "-o", tmpFile }, token);
+                result.ThrowIfFailed();
+                result = await this.runner.RunAsync(ZstdExe, scratchDir, new string[] { "-19", tmpFile, "-o", archivePath }, token);
+                result.ThrowIfFailed();
+            }
+            finally
+            {
+                if (File.Exists(tmpFile))
+                {
+                    File.Delete(tmpFile);
+                }
+            }
         }
 
         private async Task<List<GitLogEntry>> GitLogAsync(string scratchDir, CancellationToken token)

@@ -28,19 +28,6 @@ namespace AutoCrane.Services
 
         public async Task DownloadAsync(DataDownloadRequest request)
         {
-#if false
-            var manifestUrl = $"{request.StoreUrl}/.manifest";
-            this.logger.LogInformation($"Downloading {manifestUrl}");
-            var manifest = await this.client.GetAsync(manifestUrl);
-            manifest.EnsureSuccessStatusCode();
-            using var dropReader = this.dropManifestReaderFactory.FromStream(manifest.Content.ReadAsStream());
-            var mapping = dropReader.Read().FirstOrDefault(drop => drop.RefName == request.SourceRef);
-            if (mapping == null)
-            {
-                throw new DataMappingNotFoundException($"{request.Pod} could not find data ref {request.SourceRef} for data deployment {request.Name}");
-            }
-
-#endif
             var dropArchive = Path.Combine(request.DataDropFolder, request.HashToMatch);
             this.logger.LogInformation($"Checking if already downloaded to {dropArchive}");
             if (!File.Exists(dropArchive))
@@ -55,7 +42,7 @@ namespace AutoCrane.Services
                     this.logger.LogInformation($"Downloading {dropUrl} to {dropArchive}");
                     var data = await this.client.GetAsync(dropUrl);
                     data.EnsureSuccessStatusCode();
-                    using var fs = new FileStream(dropArchive, FileMode.CreateNew);
+                    using var fs = File.Create(dropArchive);
                     await data.Content.CopyToAsync(fs);
                     fs.Close();
                     await VerifyHashAsync(dropArchive, request.HashToMatch);
@@ -84,7 +71,7 @@ namespace AutoCrane.Services
 
         private static async Task VerifyHashAsync(string dropLocation, string hashToMatch)
         {
-            using var fs = new FileStream(dropLocation, FileMode.Open);
+            using var fs = File.OpenRead(dropLocation);
             using var sha = SHA256.Create();
             var hashBinary = await sha.ComputeHashAsync(fs);
             var hash = Convert.ToHexString(hashBinary);

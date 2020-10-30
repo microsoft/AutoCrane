@@ -2,9 +2,8 @@
 // Licensed under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Threading;
+using System.Text.Json;
 using System.Threading.Tasks;
 using AutoCrane.Interfaces;
 using AutoCrane.Models;
@@ -32,10 +31,11 @@ namespace AutoCrane.Services
 
         public string ManifestFilePath { get; private set; }
 
-        public void Write(IReadOnlyDictionary<string, IReadOnlyList<DataRepositorySource>> sources)
+        public async Task WriteAsync(DataRepositoryManifest manifest)
         {
             this.logger.LogInformation($"Writing manifest for {this.ManifestFilePath}");
-
+            using var fs = File.OpenWrite(this.ManifestFilePath);
+            await JsonSerializer.SerializeAsync(fs, manifest);
         }
     }
 }

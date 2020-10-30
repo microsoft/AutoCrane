@@ -5,6 +5,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoCrane.Interfaces;
 using AutoCrane.Models;
@@ -20,15 +21,17 @@ namespace AutoCrane.Apps
         private readonly IAutoCraneConfig config;
         private readonly IFailingPodGetter failingPodGetter;
         private readonly IPodEvicter podEvicter;
-        private readonly IPodDataRequestGetter podGetter;
+        private readonly IPodDataRequestGetter dataRequestGetter;
+        private readonly IDataRepositoryManifestFetcher manifestFetcher;
         private readonly ILogger<Orchestrator> logger;
 
-        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter, IPodDataRequestGetter podGetter)
+        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter, IPodDataRequestGetter podGetter, IDataRepositoryManifestFetcher manifestFetcher)
         {
             this.config = config;
             this.failingPodGetter = failingPodGetter;
             this.podEvicter = podEvicter;
-            this.podGetter = podGetter;
+            this.dataRequestGetter = podGetter;
+            this.manifestFetcher = manifestFetcher;
             this.logger = loggerFactory.CreateLogger<Orchestrator>();
         }
 
@@ -53,7 +56,9 @@ namespace AutoCrane.Apps
 
                 try
                 {
-                    await this.ProcessDataRequestsAsync(this.config.Namespaces);
+                    var manifest = await this.manifestFetcher.FetchAsync(CancellationToken.None);
+                    var requests = await this.FetchDataRequestsAsync(this.config.Namespaces);
+                    await this.ProcessDataRequestsAsync(manifest, requests);
 
                     var thisIterationFailingPods = new List<PodIdentifier>();
                     foreach (var ns in this.config.Namespaces)
@@ -98,12 +103,17 @@ namespace AutoCrane.Apps
             return 0;
         }
 
-        private async Task<IReadOnlyList<PodDataRequestInfo>> ProcessDataRequestsAsync(IEnumerable<string> namespaces)
+        private Task ProcessDataRequestsAsync(DataRepositoryManifest manifest, IReadOnlyList<PodDataRequestInfo> requests)
+        {
+            return Task.CompletedTask;
+        }
+
+        private async Task<IReadOnlyList<PodDataRequestInfo>> FetchDataRequestsAsync(IEnumerable<string> namespaces)
         {
             var list = new List<PodDataRequestInfo>();
             foreach (var ns in namespaces)
             {
-                list.AddRange(await this.podGetter.GetAsync(ns));
+                list.AddRange(await this.dataRequestGetter.GetAsync(ns));
             }
 
             return list;

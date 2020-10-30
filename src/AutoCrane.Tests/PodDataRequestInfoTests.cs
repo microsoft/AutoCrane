@@ -12,7 +12,7 @@ namespace AutoCrane.Tests
         [DataRow("request.data.autocrane.io/test1: x;status.data.autocrane.io/test1: y", "test1")]
         [DataRow("request.data.autocrane.io/test1: x;status.data.autocrane.io/test1: x", "")]
         [DataTestMethod]
-        public void TestActiveRequests(string items, string active)
+        public void TestInProgressRequests(string items, string active)
         {
             var dict = items.Split(';').Select(i =>
             {
@@ -25,7 +25,7 @@ namespace AutoCrane.Tests
             var podRequestInfo = new PodDataRequestInfo(new PodIdentifier("a", "b"), dict);
             foreach (var reqName in activeRequests.Where(r => !string.IsNullOrEmpty(r)))
             {
-                Assert.IsTrue(podRequestInfo.ActiveRequests.Any(r => r.Name == reqName));
+                Assert.IsTrue(podRequestInfo.InProgressRequests.Any(r => r == reqName));
             }
         }
     }

@@ -1,39 +1,25 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoCrane.Interfaces;
-using Microsoft.Extensions.Logging;
 
 namespace AutoCrane.Services
 {
     internal sealed class DataLinker : IDataLinker
     {
-        private readonly ILogger<DataLinker> logger;
+        private readonly IProcessRunner runner;
 
-        public DataLinker(ILoggerFactory loggerFactory)
+        public DataLinker(IProcessRunner runner)
         {
-            this.logger = loggerFactory.CreateLogger<DataLinker>();
+            this.runner = runner;
         }
 
-        public Task LinkAsync(string fromPath, string toPath)
+        public async Task LinkAsync(string fromPath, string toPath, CancellationToken token)
         {
-            using (var process = new Process()
-            {
-                StartInfo = new ProcessStartInfo()
-                {
-                    FileName = "/bin/ln",
-                },
-            })
-            {
-                process.StartInfo.ArgumentList.Add("-s");
-                process.StartInfo.ArgumentList.Add(fromPath);
-                process.StartInfo.ArgumentList.Add(toPath);
-                process.Start();
-                this.logger.LogInformation($"Running: ln -fs {fromPath} {toPath}");
-                return process.WaitForExitAsync();
-            }
+            var result = await this.runner.RunAsync("/bin/ln", null, new string[] { "-sf", fromPath, toPath }, token);
+            result.ThrowIfFailed();
         }
     }
 }

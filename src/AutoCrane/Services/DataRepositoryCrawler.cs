@@ -95,7 +95,7 @@ namespace AutoCrane.Services
 
                 try
                 {
-                    this.manifestWriter.Write(sourceList);
+                    await this.manifestWriter.WriteAsync(new DataRepositoryManifest(sourceList));
                 }
                 catch (Exception e)
                 {

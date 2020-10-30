@@ -9,6 +9,7 @@ using AutoCrane.Interfaces;
 using AutoCrane.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Converters;
 
 namespace AutoCrane.Services
 {
@@ -44,7 +45,7 @@ namespace AutoCrane.Services
 
             foreach (var dataDeployment in dataToGet)
             {
-                var name = dataDeployment.Key.Substring(CommonAnnotations.DataRequestPrefix.Length);
+                var name = dataDeployment.Key.Replace(CommonAnnotations.DataRequestPrefix, string.Empty);
                 var splits = dataDeployment.Value.Split('/', 3);
                 if (splits.Length == 3)
                 {

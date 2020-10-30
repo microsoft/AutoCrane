@@ -61,11 +61,11 @@ namespace AutoCrane.Apps
                 endpoints.MapGet("/.manifest", (ctx) =>
                 {
                     var writer = ctx.RequestServices.GetRequiredService<IDataRepositoryManifestWriter>();
-                    using var fs = new FileStream(writer.ManifestFilePath, FileMode.Open);
+                    using var fs = File.OpenRead(writer.ManifestFilePath);
                     return fs.CopyToAsync(ctx.Response.Body);
                 });
 
-                endpoints.MapGet("/{source}/{ver}", (ctx) =>
+                endpoints.MapGet("/{source}/{ver}", async (ctx) =>
                 {
                     var opts = ctx.RequestServices.GetRequiredService<IOptions<DataRepoOptions>>();
                     var fileSource = ctx.Request.RouteValues["source"]?.ToString();
@@ -74,19 +74,19 @@ namespace AutoCrane.Apps
                     if (fileVersion is null || fileSource is null || fileRoot is null)
                     {
                         ctx.Response.StatusCode = 400;
-                        return Task.CompletedTask;
+                        return;
                     }
 
                     var filePath = Path.Combine(fileRoot, fileSource, fileVersion);
                     if (File.Exists(filePath))
                     {
-                        using var fs = new FileStream(filePath, FileMode.Open);
-                        return fs.CopyToAsync(ctx.Response.Body);
+                        using var fs = File.OpenRead(filePath);
+                        await fs.CopyToAsync(ctx.Response.Body);
                     }
                     else
                     {
                         ctx.Response.StatusCode = 404;
-                        return Task.CompletedTask;
+                        return;
                     }
                 });
             });

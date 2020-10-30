@@ -11,8 +11,8 @@ Another important feature is the concept of a data deployment. Applications ofte
   - AutoCrane:
     - Asks DataRepository for data versions and tells pods/DataDeployer what version of data to sync.
     - Calls Eviction API on pods with watchdog failures.
-  - DataDeployer: an init and sidecar container for downloading data from DataRepository
-  - DataRepository: Probes for new data versions, downloads locally, serves version info and data to cluster.
+  - DataDeployer: an init and sidecar container for downloading data from DataRepository. Reads requests from AutoCrane and updates pod status when complete.
+  - DataRepository: Probes for new data versions, downloads locally, serves version info manifest to AutoCrane and actual data to DataDeployer.
   - Get/Post Watchdog: A utility to get or post watchdog information.
   - TestWorkload: A program with a GET `/watchdog` endpoint which fails after you post to `/fail`.
   - WatchdogProber: Finds watchdog probe URLs by scanning pod annotations. Probes and updates watchdog status annotations/labels

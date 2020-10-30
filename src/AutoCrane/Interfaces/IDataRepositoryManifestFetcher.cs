@@ -3,11 +3,12 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using AutoCrane.Models;
 
 namespace AutoCrane.Interfaces
 {
-    public interface IProcessRunner
+    public interface IDataRepositoryManifestFetcher
     {
-        Task<IProcessResult> RunAsync(string exe, string? workingDir, string[] args, CancellationToken cancellationToken);
+        Task<DataRepositoryManifest> FetchAsync(CancellationToken token);
     }
 }
