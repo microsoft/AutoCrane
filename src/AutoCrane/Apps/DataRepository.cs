@@ -43,13 +43,13 @@ namespace AutoCrane.Apps
                         return ctx.Response.WriteAsync("crawler not running");
                     }
 
-                    if (string.IsNullOrEmpty(opts.Value.Path))
+                    if (string.IsNullOrEmpty(opts.Value.ArchivePath))
                     {
                         ctx.Response.StatusCode = 500;
                         return ctx.Response.WriteAsync("path not set");
                     }
 
-                    if (!Directory.Exists(opts.Value.Path))
+                    if (!Directory.Exists(opts.Value.ArchivePath))
                     {
                         ctx.Response.StatusCode = 500;
                         return ctx.Response.WriteAsync("path does not exist");
@@ -58,18 +58,19 @@ namespace AutoCrane.Apps
                     return ctx.Response.WriteAsync("ok");
                 });
 
-                endpoints.MapGet("/{file}", (ctx) =>
+                endpoints.MapGet("/{source}/{ver}", (ctx) =>
                 {
                     var opts = ctx.RequestServices.GetRequiredService<IOptions<DataRepoOptions>>();
-                    var file = ctx.Request.RouteValues["file"]?.ToString();
-                    var fileRoot = opts.Value.Path;
-                    if (file is null || fileRoot is null)
+                    var fileSource = ctx.Request.RouteValues["source"]?.ToString();
+                    var fileVersion = ctx.Request.RouteValues["ver"]?.ToString();
+                    var fileRoot = opts.Value.ArchivePath;
+                    if (fileVersion is null || fileSource is null || fileRoot is null)
                     {
                         ctx.Response.StatusCode = 400;
                         return Task.CompletedTask;
                     }
 
-                    var filePath = Path.Combine(fileRoot, file);
+                    var filePath = Path.Combine(fileRoot, fileSource, fileVersion);
                     if (File.Exists(filePath))
                     {
                         using var fs = new FileStream(filePath, FileMode.Open);

@@ -9,14 +9,14 @@ using AutoCrane.Models;
 
 namespace AutoCrane.Services
 {
-    internal sealed class DropManifestReaderFactory : IDropManifestReaderFactory
+    internal sealed class DataRepositoryManifestReaderFactory : IDataRepositoryManifestReaderFactory
     {
-        public IDropManifestReader FromStream(Stream s)
+        public IDataRepositoryManifestReader FromStream(Stream s)
         {
             return new DropManifestReader(s);
         }
 
-        private class DropManifestReader : IDropManifestReader
+        private class DropManifestReader : IDataRepositoryManifestReader
         {
             private readonly StreamReader reader;
 

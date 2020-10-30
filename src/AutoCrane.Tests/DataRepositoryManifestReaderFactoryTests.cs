@@ -4,7 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace AutoCrane.Tests
 {
     [TestClass]
-    public class DropManifestReaderFactoryTests
+    public class DataRepositoryManifestReaderFactoryTests
     {
 
         [TestMethod]

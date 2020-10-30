@@ -441,8 +441,10 @@ spec:
         env:
           - name: AUTOCRANE_ARGS
             value: datarepo
-          - name: DataRepo__Path
-            value: /data
+          - name: DataRepo__ArchivePath
+            value: /data/archives
+          - name: DataRepo__SourcePath
+            value: /data/source
           - name: DataRepo__Sources
             value: ""data1:git@https://github.com/microsoft/AutoCrane.git""
         resources:

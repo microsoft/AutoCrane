@@ -10,6 +10,7 @@ COPY src/AutoCrane/. /source/src/AutoCrane
 RUN dotnet publish -c release -o /app -r linux-musl-x64 --self-contained true --no-restore
 
 FROM mcr.microsoft.com/dotnet/runtime-deps:5.0-alpine
+RUN apk add git zstd
 WORKDIR /app
 COPY --from=build /app ./
 ENTRYPOINT ["./AutoCrane"]

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,8 +9,10 @@ using AutoCrane.Models;
 
 namespace AutoCrane.Interfaces
 {
-    public interface IDataRepositorySyncer
+    public interface IDataRepositoryFetcher
     {
-        Task<IReadOnlyList<DataRepositorySource>> SyncRepoAsync(string sourcePath, string archivePath, string repoString, CancellationToken cancellationToken);
+        bool CanFetch(string protocol);
+
+        Task<IReadOnlyList<DataRepositorySource>> FetchAsync(string url, string scratchDir, string archiveDir, CancellationToken token);
     }
 }

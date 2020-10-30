@@ -5,8 +5,8 @@ using System.IO;
 
 namespace AutoCrane.Interfaces
 {
-    public interface IDropManifestReaderFactory
+    public interface IDataRepositoryManifestReaderFactory
     {
-        IDropManifestReader FromStream(Stream s);
+        IDataRepositoryManifestReader FromStream(Stream s);
     }
 }

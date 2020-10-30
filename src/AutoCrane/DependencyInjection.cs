@@ -39,9 +39,12 @@ namespace AutoCrane
             services.AddSingleton<IDataDownloader, DataDownloader>();
             services.AddSingleton<IDataLinker, DataLinker>();
             services.AddSingleton<IDataDownloadRequestFactory, DataDownloadRequestFactory>();
-            services.AddSingleton<IDropManifestReaderFactory, DropManifestReaderFactory>();
+            services.AddSingleton<IDataRepositoryManifestReaderFactory, DataRepositoryManifestReaderFactory>();
             services.AddSingleton<IServiceHeartbeat, ServiceHeartbeat>();
             services.AddSingleton<IDataRepositorySyncer, DataRepositorySyncer>();
+            services.AddSingleton<IDataRepositoryManifestWriter, DataRepositoryManifestWriter>();
+            services.AddSingleton<IDataRepositoryFetcher, DataRepositoryGitFetcher>();
+            services.AddSingleton<IProcessRunner, ProcessRunner>();
 
             services.AddSingleton<KubernetesClient>();
             services.AddSingleton<WatchdogProber>();

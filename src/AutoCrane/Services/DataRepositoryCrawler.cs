@@ -21,26 +21,37 @@ namespace AutoCrane.Services
         private readonly IOptions<DataRepoOptions> options;
         private readonly IServiceHeartbeat heartbeat;
         private readonly IDataRepositorySyncer repoSyncer;
+        private readonly IDataRepositoryManifestWriter manifestWriter;
 
-        public DataRepositoryCrawler(ILoggerFactory loggerFactory, IOptions<DataRepoOptions> options, IServiceHeartbeat heartbeat, IDataRepositorySyncer repoSyncer)
+        public DataRepositoryCrawler(ILoggerFactory loggerFactory, IOptions<DataRepoOptions> options, IServiceHeartbeat heartbeat, IDataRepositorySyncer repoSyncer, IDataRepositoryManifestWriter manifestWriter)
         {
             this.logger = loggerFactory.CreateLogger<DataRepositoryCrawler>();
             this.options = options;
             this.heartbeat = heartbeat;
             this.repoSyncer = repoSyncer;
+            this.manifestWriter = manifestWriter;
         }
 
         public static TimeSpan HeartbeatTimeout { get; } = TimeSpan.FromMinutes(10);
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            this.logger.LogInformation("DataRepositoryCrawler ExecuteAsync start");
-
-            var repoDir = this.options.Value.Path;
-            if (repoDir is null || !Directory.Exists(repoDir))
+            var sourcePath = this.options.Value.SourcePath;
+            var archivePath = this.options.Value.ArchivePath;
+            if (sourcePath is null)
             {
-                this.logger.LogError($"Repo path not set or does not exist: {repoDir}");
+                this.logger.LogError($"Source path not set.");
+                return;
             }
+
+            if (archivePath is null)
+            {
+                this.logger.LogError($"Archive path not set");
+                return;
+            }
+
+            Directory.CreateDirectory(sourcePath);
+            Directory.CreateDirectory(archivePath);
 
             // turn "data1:git@https://github.com/microsoft/AutoCrane.git data2:git@https://github.com/dotnet/installer.git"
             // into ["data1"] = git@https://github.com/microsoft/AutoCrane.git
@@ -60,6 +71,7 @@ namespace AutoCrane.Services
             while (!stoppingToken.IsCancellationRequested)
             {
                 var success = true;
+                var sourceList = new List<DataRepositorySource>();
                 foreach (var repo in sources)
                 {
                     if (stoppingToken.IsCancellationRequested)
@@ -69,7 +81,10 @@ namespace AutoCrane.Services
 
                     try
                     {
-                        await this.repoSyncer.SyncRepoAsync(repo.Key, repo.Value, stoppingToken);
+                        var fullArchivePath = Path.Combine(archivePath, repo.Key);
+                        Directory.CreateDirectory(fullArchivePath);
+                        var newSources = await this.repoSyncer.SyncRepoAsync(sourcePath, fullArchivePath, repo.Value, stoppingToken);
+                        sourceList.AddRange(newSources);
                     }
                     catch (Exception e)
                     {
@@ -78,15 +93,23 @@ namespace AutoCrane.Services
                     }
                 }
 
+                try
+                {
+                    this.manifestWriter.Write(archivePath, sourceList);
+                }
+                catch (Exception e)
+                {
+                    this.logger.LogError($"Error writing manifest: {e}");
+                    success = false;
+                }
+
                 if (success)
                 {
                     this.heartbeat.Beat(nameof(DataRepositoryCrawler));
                 }
 
-                await Task.Delay(10_000, stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(15), stoppingToken);
             }
-
-            this.logger.LogInformation("DataRepositoryCrawler ExecuteAsync stop");
         }
     }
 }
