@@ -68,31 +68,46 @@ namespace AutoCrane.Apps
                         foreach (var pod in pods)
                         {
                             podCount++;
-                            var failedWatchdogs = new List<WatchdogStatus>();
+                            var watchdogsToPut = new List<WatchdogStatus>();
                             foreach (var annotation in pod.Annotations)
                             {
                                 if (annotation.Key.StartsWith(ProbeAnnotationPrefix))
                                 {
-                                    var wdName = annotation.Key[ProbeAnnotationPrefix.Length..];
                                     probeCount++;
-                                    var error = await this.ProbePod(pod.PodIp, annotation.Value);
-                                    if (error != null)
-                                    {
-                                        this.logger.LogWarning($"Watchdog {wdName} Error on {pod.Id.Name}: {error}");
+                                    var wdName = annotation.Key.Replace(ProbeAnnotationPrefix, string.Empty);
+                                    var wdAnnotationName = WatchdogStatus.Prefix + wdName;
+                                    var alreadyInErrorState = pod.Annotations.Any(pa => pa.Key == wdAnnotationName && pa.Value.StartsWith(WatchdogStatus.ErrorLevel));
 
-                                        failedWatchdogs.Add(new WatchdogStatus()
+                                    var error = await this.ProbePod(pod.PodIp, annotation.Value);
+                                    if (error != null && !alreadyInErrorState)
+                                    {
+                                        this.logger.LogWarning($"Watchdog {wdName} Error on {pod.Id}: {error}");
+
+                                        watchdogsToPut.Add(new WatchdogStatus()
                                         {
                                             Name = wdName,
                                             Level = WatchdogStatus.ErrorLevel,
                                             Message = error,
                                         });
                                     }
-                                }
+                                    else if (error == null && alreadyInErrorState)
+                                    {
+                                        // we need to clear the error
+                                        this.logger.LogWarning($"Watchdog {wdName} OK on {pod.Id}");
 
-                                if (failedWatchdogs.Any())
-                                {
-                                    await this.watchdogStatusPutter.PutStatusAsync(pod.Id, failedWatchdogs);
+                                        watchdogsToPut.Add(new WatchdogStatus()
+                                        {
+                                            Name = wdName,
+                                            Level = WatchdogStatus.InfoLevel,
+                                            Message = $"error cleared",
+                                        });
+                                    }
                                 }
+                            }
+
+                            if (watchdogsToPut.Any())
+                            {
+                                await this.watchdogStatusPutter.PutStatusAsync(pod.Id, watchdogsToPut);
                             }
                         }
                     }

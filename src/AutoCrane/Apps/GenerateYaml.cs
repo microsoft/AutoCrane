@@ -296,6 +296,9 @@ spec:
       - name: testworkload
         image: !!IMAGE!!
         imagePullPolicy: !!PULL!!
+        volumeMounts:
+            - mountPath: /data
+              name: test-volume
         ports:
         - containerPort: 8080
           name: http
@@ -333,6 +336,8 @@ spec:
         env:
           - name: AUTOCRANE_ARGS
             value: datadeploy
+          - name: LISTEN_PORT
+            value: ""8082""
           - name: Pod__Name
             valueFrom:
               fieldRef:
@@ -446,7 +451,7 @@ spec:
           - name: DataRepo__SourcePath
             value: /data/source
           - name: DataRepo__Sources
-            value: ""data1:git@https://github.com/microsoft/AutoCrane.git""
+            value: ""autocranegit:git@https://github.com/microsoft/AutoCrane.git""
         resources:
           requests:
             cpu: 100m

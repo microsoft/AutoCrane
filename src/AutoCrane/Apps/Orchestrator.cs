@@ -17,7 +17,7 @@ namespace AutoCrane.Apps
     public sealed class Orchestrator
     {
         private const int ConsecutiveErrorCountBeforeExiting = 5;
-        private const int IterationLoopSeconds = 10;
+        private const int IterationLoopSeconds = 60;
         private const int WatchdogFailuresBeforeEviction = 3;
         private readonly IAutoCraneConfig config;
         private readonly IFailingPodGetter failingPodGetter;
