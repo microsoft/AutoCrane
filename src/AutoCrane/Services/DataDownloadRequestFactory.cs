@@ -47,16 +47,18 @@ namespace AutoCrane.Services
 
             foreach (var dataDeployment in dataToGet)
             {
-                var name = dataDeployment.Key.Replace(CommonAnnotations.DataRequestPrefix, string.Empty);
+                var localDeploymentName = dataDeployment.Key.Replace(CommonAnnotations.DataRequestPrefix, string.Empty);
+                var dataDeploymentAnnotation = $"{CommonAnnotations.DataDeploymentPrefix}{localDeploymentName}";
+                var repoName = podInfo.Annotations.Where(pa => pa.Key == dataDeploymentAnnotation).FirstOrDefault().Value;
                 var utf8json = Convert.FromBase64String(dataDeployment.Value);
                 var details = JsonSerializer.Deserialize<DataDownloadRequestDetails>(utf8json);
-                if (details is null || details.Hash is null || details.Path is null)
+                if (details is null || details.Hash is null || details.Path is null || repoName is null)
                 {
                     continue;
                 }
 
-                var extractionLocation = details.Path.Replace(Path.PathSeparator, '_');
-                list.Add(new DataDownloadRequest(pod, name, dropFolder, extractionLocation, details));
+                var extractionLocation = Path.Combine(dropFolder, details.Path.Replace(Path.PathSeparator, '_'));
+                list.Add(new DataDownloadRequest(pod, localDeploymentName, repoName, dropFolder, extractionLocation, details));
             }
 
             return list;

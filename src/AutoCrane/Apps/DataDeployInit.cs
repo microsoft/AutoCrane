@@ -17,6 +17,7 @@ namespace AutoCrane.Apps
     public sealed class DataDeployInit
     {
         private const int ConsecutiveErrorCountBeforeExiting = 5;
+        private const int IterationLoopSeconds = 15;
         private readonly IDataDownloader dataDownloader;
         private readonly IDataDownloadRequestFactory downloadRequestFactory;
         private readonly IDataLinker dataLinker;
@@ -54,7 +55,7 @@ namespace AutoCrane.Apps
                         foreach (var request in requests)
                         {
                             await this.dataDownloader.DownloadAsync(request);
-                            await this.dataLinker.LinkAsync(request.ExtractionLocation, Path.Combine(request.DataDropFolder, request.Name), CancellationToken.None);
+                            await this.dataLinker.LinkAsync(request.ExtractionLocation, Path.Combine(request.DataDropFolder, request.LocalName), CancellationToken.None);
 
                             // is writing an annotation to indicate success too much access for a sidecar?
                             // var requestB64 = Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(request.Details));
@@ -71,6 +72,8 @@ namespace AutoCrane.Apps
                         errorCount++;
                     }
                 }
+
+                await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds));
             }
 
             this.logger.LogError($"Hit max consecutive error count...exiting...");

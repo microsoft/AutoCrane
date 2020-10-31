@@ -38,7 +38,7 @@ namespace AutoCrane.Services
 
             var dropArchive = Path.Combine(request.DataDropFolder, request.Details.Hash);
             this.logger.LogInformation($"Checking if already downloaded to {dropArchive}");
-            if (!File.Exists(dropArchive))
+            if (File.Exists(dropArchive))
             {
                 this.logger.LogInformation($"Already downloaded to {dropArchive}");
             }
@@ -46,7 +46,7 @@ namespace AutoCrane.Services
             {
                 try
                 {
-                    var dropUrl = $"http://datarepo/{request.Details.Path}";
+                    var dropUrl = $"http://datarepo/{request.RepoName}/{request.Details.Path}";
                     this.logger.LogInformation($"Downloading {dropUrl} to {dropArchive}");
                     var data = await this.client.GetAsync(dropUrl);
                     data.EnsureSuccessStatusCode();
@@ -54,21 +54,24 @@ namespace AutoCrane.Services
                     await data.Content.CopyToAsync(fs);
                     fs.Close();
                     await this.VerifyHashAsync(dropArchive, request.Details.Hash);
-                    this.logger.LogInformation($"Downloading {dropArchive} to {request.ExtractionLocation}");
+                    this.logger.LogInformation($"Extacting {dropArchive} to {request.ExtractionLocation}");
+                    Directory.CreateDirectory(request.ExtractionLocation);
                     await this.ExtractArchiveAsync(dropArchive, request.ExtractionLocation, CancellationToken.None);
                 }
                 catch (Exception e)
                 {
-                    this.logger.LogError($"Exception downloading {request.Name}: {e}");
+                    this.logger.LogError($"Exception downloading {request.LocalName}: {e}");
 
                     // clean up partial downloads
                     if (File.Exists(dropArchive))
                     {
+                        this.logger.LogInformation($"Deleting dropArchive {dropArchive}");
                         File.Delete(dropArchive);
                     }
 
                     if (Directory.Exists(request.ExtractionLocation))
                     {
+                        this.logger.LogInformation($"Deleting extraction location rm -rf {request.ExtractionLocation}");
                         Directory.Delete(request.ExtractionLocation, recursive: true);
                     }
 
@@ -88,8 +91,22 @@ namespace AutoCrane.Services
 
         private async Task ExtractArchiveAsync(string dropArchive, string dropLocation, CancellationToken token)
         {
-            var result = await this.runner.RunAsync("/bin/tar", null, new string[] { "-x", "-C", dropLocation, "-f", dropArchive }, token);
-            result.ThrowIfFailed();
+            var tmpFile = dropArchive + ".tmp";
+            try
+            {
+                var result = await this.runner.RunAsync("/usr/bin/zstd", null, new string[] { "-d", dropArchive, "-o", tmpFile }, token);
+                result.ThrowIfFailed();
+                result = await this.runner.RunAsync("/bin/tar", null, new string[] { "-x", "-C", dropLocation, "-f", tmpFile }, token);
+                result.ThrowIfFailed();
+            }
+            finally
+            {
+                if (File.Exists(tmpFile))
+                {
+                    this.logger.LogInformation($"Deleting temp file {tmpFile}");
+                    File.Delete(tmpFile);
+                }
+            }
         }
     }
 }
