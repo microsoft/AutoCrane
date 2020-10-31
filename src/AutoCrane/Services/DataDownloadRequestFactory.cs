@@ -1,9 +1,11 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using AutoCrane.Interfaces;
 using AutoCrane.Models;
@@ -46,13 +48,15 @@ namespace AutoCrane.Services
             foreach (var dataDeployment in dataToGet)
             {
                 var name = dataDeployment.Key.Replace(CommonAnnotations.DataRequestPrefix, string.Empty);
-                var splits = dataDeployment.Value.Split('/', 3);
-                if (splits.Length == 3)
+                var utf8json = Convert.FromBase64String(dataDeployment.Value);
+                var details = JsonSerializer.Deserialize<DataDownloadRequestDetails>(utf8json);
+                if (details is null || details.Hash is null || details.Path is null)
                 {
-                    var repoFilename = splits[1];
-                    var extractionLocation = repoFilename.Replace(Path.PathSeparator, '_');
-                    list.Add(new DataDownloadRequest(pod, name, repoHostname: splits[2], dropFolder: dropFolder, repoFilename: repoFilename, hashToMatch: splits[0], extractionLocation: extractionLocation));
+                    continue;
                 }
+
+                var extractionLocation = details.Path.Replace(Path.PathSeparator, '_');
+                list.Add(new DataDownloadRequest(pod, name, dropFolder, extractionLocation, details));
             }
 
             return list;

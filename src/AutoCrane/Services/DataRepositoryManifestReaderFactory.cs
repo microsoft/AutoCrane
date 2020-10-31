@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
@@ -34,6 +35,11 @@ namespace AutoCrane.Services
             {
                 var result = await JsonSerializer.DeserializeAsync<DataRepositoryManifest>(this.stream, cancellationToken: token);
                 if (result is null)
+                {
+                    throw new InvalidDataException(nameof(DataRepositoryManifest));
+                }
+
+                if (result.Sources is null)
                 {
                     throw new InvalidDataException(nameof(DataRepositoryManifest));
                 }

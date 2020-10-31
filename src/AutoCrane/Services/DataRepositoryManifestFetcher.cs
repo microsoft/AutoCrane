@@ -21,12 +21,6 @@ namespace AutoCrane.Services
         public DataRepositoryManifestFetcher(ILoggerFactory loggerFactory, IOptions<DataRepoOptions> options, IDataRepositoryManifestReaderFactory manifestReaderFactory)
         {
             this.logger = loggerFactory.CreateLogger<DataRepositoryManifestFetcher>();
-            var rootDirectory = options.Value.ArchivePath;
-            if (rootDirectory is null)
-            {
-                throw new ArgumentNullException($"DataRepoOptions:ArchivePath is null");
-            }
-
             this.client = new HttpClient();
             this.manifestReaderFactory = manifestReaderFactory;
         }

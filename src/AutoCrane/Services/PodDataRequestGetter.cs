@@ -21,17 +21,7 @@ namespace AutoCrane.Services
         public async Task<IReadOnlyList<PodDataRequestInfo>> GetAsync(string ns)
         {
             var pods = await this.client.GetPodAnnotationAsync(ns);
-            var result = new List<PodDataRequestInfo>(pods.Count);
-            foreach (var pod in pods)
-            {
-                var dataRequest = new PodDataRequestInfo(pod.Id, pod.Annotations);
-                if (dataRequest.InProgressRequests.Any())
-                {
-                    result.Add(dataRequest);
-                }
-            }
-
-            return result;
+            return pods.Select(p => new PodDataRequestInfo(p.Id, p.Annotations)).ToList();
         }
     }
 }

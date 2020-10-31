@@ -4,6 +4,7 @@
 using System;
 using System.IO;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,17 +19,24 @@ namespace AutoCrane.Services
         private readonly HttpClient client;
         private readonly ILogger<DataDownloader> logger;
         private readonly IProcessRunner runner;
+        private readonly IFileHasher fileHasher;
 
-        public DataDownloader(ILoggerFactory loggerFactory, IProcessRunner runner)
+        public DataDownloader(ILoggerFactory loggerFactory, IProcessRunner runner, IFileHasher fileHasher)
         {
             this.client = new HttpClient();
             this.logger = loggerFactory.CreateLogger<DataDownloader>();
             this.runner = runner;
+            this.fileHasher = fileHasher;
         }
 
         public async Task DownloadAsync(DataDownloadRequest request)
         {
-            var dropArchive = Path.Combine(request.DataDropFolder, request.HashToMatch);
+            if (request.Details.Hash is null || request.Details.Path is null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
+            var dropArchive = Path.Combine(request.DataDropFolder, request.Details.Hash);
             this.logger.LogInformation($"Checking if already downloaded to {dropArchive}");
             if (!File.Exists(dropArchive))
             {
@@ -38,14 +46,14 @@ namespace AutoCrane.Services
             {
                 try
                 {
-                    var dropUrl = $"http://{request.DataRepositoryHostname}/{request.DataRepositoryFilename}";
+                    var dropUrl = $"http://datarepo/{request.Details.Path}";
                     this.logger.LogInformation($"Downloading {dropUrl} to {dropArchive}");
                     var data = await this.client.GetAsync(dropUrl);
                     data.EnsureSuccessStatusCode();
                     using var fs = File.Create(dropArchive);
                     await data.Content.CopyToAsync(fs);
                     fs.Close();
-                    await VerifyHashAsync(dropArchive, request.HashToMatch);
+                    await this.VerifyHashAsync(dropArchive, request.Details.Hash);
                     this.logger.LogInformation($"Downloading {dropArchive} to {request.ExtractionLocation}");
                     await this.ExtractArchiveAsync(dropArchive, request.ExtractionLocation, CancellationToken.None);
                 }
@@ -69,12 +77,9 @@ namespace AutoCrane.Services
             }
         }
 
-        private static async Task VerifyHashAsync(string dropLocation, string hashToMatch)
+        private async Task VerifyHashAsync(string dropLocation, string hashToMatch)
         {
-            using var fs = File.OpenRead(dropLocation);
-            using var sha = SHA256.Create();
-            var hashBinary = await sha.ComputeHashAsync(fs);
-            var hash = Convert.ToHexString(hashBinary);
+            var hash = await this.fileHasher.GetAsync(dropLocation);
             if (hashToMatch != hash)
             {
                 throw new Exception($"Hash mismatch on {dropLocation}, expected {hashToMatch}, actual {hash}");

@@ -8,20 +8,13 @@ namespace AutoCrane.Models
 {
     public sealed class DataDownloadRequest
     {
-        public DataDownloadRequest(PodIdentifier pod, string name, string repoHostname, string dropFolder, string repoFilename, string hashToMatch, string extractionLocation)
+        public DataDownloadRequest(PodIdentifier pod, string name, string dropFolder, string extractionLocation, DataDownloadRequestDetails details)
         {
             this.Pod = pod;
             this.Name = name;
-            this.DataRepositoryHostname = repoHostname;
-            this.DataRepositoryFilename = repoFilename;
             this.DataDropFolder = dropFolder;
-            this.HashToMatch = hashToMatch;
             this.ExtractionLocation = extractionLocation;
-
-            if (this.HashToMatch.Any(ch => char.IsLetterOrDigit(ch)))
-            {
-                throw new ArgumentOutOfRangeException(nameof(hashToMatch));
-            }
+            this.Details = details;
         }
 
         public PodIdentifier Pod { get; }
@@ -32,28 +25,15 @@ namespace AutoCrane.Models
         public string Name { get; }
 
         /// <summary>
-        /// The data repository host name.
-        /// </summary>
-        public string DataRepositoryHostname { get; }
-
-        /// <summary>
-        /// The file name on data repository host with the data.
-        /// </summary>
-        public string DataRepositoryFilename { get; }
-
-        /// <summary>
         /// The folder to put the extracted data into.
         /// </summary>
         public string DataDropFolder { get; }
 
         /// <summary>
-        /// A hash of the contents of the archive.
-        /// </summary>
-        public string HashToMatch { get; }
-
-        /// <summary>
         /// The place to put the extracted archive.
         /// </summary>
         public string ExtractionLocation { get; }
+
+        public DataDownloadRequestDetails Details { get; }
     }
 }

@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace AutoCrane.Apps
@@ -36,33 +37,37 @@ namespace AutoCrane.Apps
                 {
                     var opts = ctx.RequestServices.GetRequiredService<IOptions<DataRepoOptions>>();
                     var heartbeat = ctx.RequestServices.GetRequiredService<IServiceHeartbeat>();
+                    var logger = ctx.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("ping");
                     var lastDataRepoCrawl = heartbeat.GetLastBeat(nameof(DataRepositoryCrawler));
                     if (!lastDataRepoCrawl.HasValue || lastDataRepoCrawl.Value > DataRepositoryCrawler.HeartbeatTimeout)
                     {
                         ctx.Response.StatusCode = 500;
+                        logger.LogError($"crawler not running");
                         return ctx.Response.WriteAsync("crawler not running");
                     }
 
                     if (string.IsNullOrEmpty(opts.Value.ArchivePath))
                     {
                         ctx.Response.StatusCode = 500;
+                        logger.LogError($"archive path not set");
                         return ctx.Response.WriteAsync("path not set");
                     }
 
                     if (!Directory.Exists(opts.Value.ArchivePath))
                     {
                         ctx.Response.StatusCode = 500;
+                        logger.LogError($"archive path does not exist");
                         return ctx.Response.WriteAsync("path does not exist");
                     }
 
                     return ctx.Response.WriteAsync("ok");
                 });
 
-                endpoints.MapGet("/.manifest", (ctx) =>
+                endpoints.MapGet("/.manifest", async (ctx) =>
                 {
                     var writer = ctx.RequestServices.GetRequiredService<IDataRepositoryManifestWriter>();
                     using var fs = File.OpenRead(writer.ManifestFilePath);
-                    return fs.CopyToAsync(ctx.Response.Body);
+                    await fs.CopyToAsync(ctx.Response.Body);
                 });
 
                 endpoints.MapGet("/{source}/{ver}", async (ctx) =>

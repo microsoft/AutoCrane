@@ -12,6 +12,6 @@ namespace AutoCrane.Models
             this.Sources = sources;
         }
 
-        public IReadOnlyDictionary<string, IReadOnlyList<DataRepositorySource>> Sources { get; }
+        public IReadOnlyDictionary<string, IReadOnlyList<DataRepositorySource>> Sources { get; internal set; }
     }
 }

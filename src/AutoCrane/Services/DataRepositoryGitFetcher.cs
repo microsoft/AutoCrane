@@ -18,11 +18,13 @@ namespace AutoCrane.Services
         private const string ZstdExe = "/usr/bin/zstd";
         private readonly ILogger<DataRepositoryGitFetcher> logger;
         private readonly IProcessRunner runner;
+        private readonly IFileHasher fileHasher;
 
-        public DataRepositoryGitFetcher(ILoggerFactory loggerFactory, IProcessRunner runner)
+        public DataRepositoryGitFetcher(ILoggerFactory loggerFactory, IProcessRunner runner, IFileHasher fileHasher)
         {
             this.logger = loggerFactory.CreateLogger<DataRepositoryGitFetcher>();
             this.runner = runner;
+            this.fileHasher = fileHasher;
         }
 
         public bool CanFetch(string protocol)
@@ -58,7 +60,10 @@ namespace AutoCrane.Services
                     await this.GitArchiveAsync(entry.Hash, scratchDir, archivePath, token);
                 }
 
-                list.Add(new DataRepositorySource(archivePath, DateTimeOffset.FromUnixTimeSeconds(entry.UnixTime)));
+                list.Add(new DataRepositorySource(
+                    archivePath.Replace(archiveDropDir + Path.DirectorySeparatorChar, string.Empty),
+                    await this.fileHasher.GetAsync(archivePath, cacheOnDisk: true),
+                    DateTimeOffset.FromUnixTimeSeconds(entry.UnixTime)));
             }
 
             return list;

@@ -32,7 +32,7 @@ namespace AutoCrane.Services
             this.manifestWriter = manifestWriter;
         }
 
-        public static TimeSpan HeartbeatTimeout { get; } = TimeSpan.FromMinutes(10);
+        public static TimeSpan HeartbeatTimeout { get; } = TimeSpan.FromMinutes(35);
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -108,7 +108,7 @@ namespace AutoCrane.Services
                     this.heartbeat.Beat(nameof(DataRepositoryCrawler));
                 }
 
-                await Task.Delay(TimeSpan.FromMinutes(15), stoppingToken);
+                await Task.Delay(HeartbeatTimeout / 2, stoppingToken);
             }
         }
     }
