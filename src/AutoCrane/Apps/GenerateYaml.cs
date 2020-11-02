@@ -265,14 +265,40 @@ spec:
     metadata:
       annotations:
         probe.autocrane.io/watchdog1: POD_IP:8080/watchdog
+        store.autocrane.io/location: /data
+        data.autocrane.io/data1: autocranegit
       labels:
         app.kubernetes.io/name: testworkload
         app.kubernetes.io/part-of: autocrane
     spec:
+      volumes:
+          - name: test-volume
+            emptyDir: {}
+      initContainers:
+          - name: setup-vol-1
+            image: !!IMAGE!!
+            imagePullPolicy: !!PULL!!
+            volumeMounts:
+                - mountPath: /data
+                  name: test-volume
+            env:
+              - name: AUTOCRANE_ARGS
+                value: datadeployinit
+              - name: Pod__Name
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
+              - name: Pod__Namespace
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
       containers:
       - name: testworkload
         image: !!IMAGE!!
         imagePullPolicy: !!PULL!!
+        volumeMounts:
+            - mountPath: /data
+              name: test-volume
         ports:
         - containerPort: 8080
           name: http
@@ -301,6 +327,25 @@ spec:
           initialDelaySeconds: 10
           periodSeconds: 15
           timeoutSeconds: 10
+      - name: data
+        image: !!IMAGE!!
+        imagePullPolicy: !!PULL!!
+        volumeMounts:
+            - mountPath: /data
+              name: test-volume
+        env:
+          - name: AUTOCRANE_ARGS
+            value: datadeploy
+          - name: LISTEN_PORT
+            value: ""8082""
+          - name: Pod__Name
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: Pod__Namespace
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
       - name: watchdoghealthz
         image: !!IMAGE!!
         imagePullPolicy: !!PULL!!
@@ -338,6 +383,102 @@ spec:
         beta.kubernetes.io/os: linux
 ";
 
+        private const string DataRepoYaml = @"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: datarepo
+  namespace: !!NAMESPACE!!
+  labels:
+    app.kubernetes.io/name: datarepo
+    app.kubernetes.io/part-of: autocrane
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: datarepo
+  namespace: !!NAMESPACE!!
+  labels:
+    app.kubernetes.io/name: datarepo
+    app.kubernetes.io/part-of: autocrane
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: http
+  selector:
+    app.kubernetes.io/name: datarepo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: datarepo
+  namespace: !!NAMESPACE!!
+  labels:
+    app.kubernetes.io/name: datarepo
+    app.kubernetes.io/part-of: autocrane
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: datarepo
+  replicas: !!DATAREPO_REPLICAS!!
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: datarepo
+        app.kubernetes.io/part-of: autocrane
+    spec:
+      volumes:
+          - name: data-store
+            emptyDir: {}
+      containers:
+      - name: datarepo
+        image: !!IMAGE!!
+        imagePullPolicy: !!PULL!!
+        volumeMounts:
+            - mountPath: /data
+              name: data-store
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+          - name: AUTOCRANE_ARGS
+            value: datarepo
+          - name: DataRepo__ArchivePath
+            value: /data/archives
+          - name: DataRepo__SourcePath
+            value: /data/source
+          - name: DataRepo__Sources
+            value: ""autocranegit:git@https://github.com/microsoft/AutoCrane.git""
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50M
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: http
+          periodSeconds: 60
+          timeoutSeconds: 10
+        startupProbe:
+          httpGet:
+            path: /ping
+            port: http
+          failureThreshold: 10
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 10
+      serviceAccountName: datarepo
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+";
+
         public static int Run(string[] args)
         {
             var config = new Dictionary<string, string>()
@@ -348,8 +489,10 @@ spec:
                 ["autocrane_replicas"] = "1",
                 ["watchdogprober_replicas"] = "1",
                 ["testworkload_replicas"] = "3",
+                ["datarepo_replicas"] = "1",
                 ["use_watchdogprober"] = "1",
                 ["use_testworkload"] = "0",
+                ["use_datarepo"] = "1",
             };
 
             foreach (var arg in args)
@@ -381,6 +524,11 @@ spec:
             if (config["use_watchdogprober"] != "0")
             {
                 output += WatchdogProberYaml.Replace("\r", string.Empty);
+            }
+
+            if (config["use_datarepo"] != "0")
+            {
+                output += DataRepoYaml.Replace("\r", string.Empty);
             }
 
             foreach (var item in config)

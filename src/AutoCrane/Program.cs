@@ -17,7 +17,6 @@ namespace AutoCrane
             {
                 Console.Error.WriteLine("Usage: AutoCrane <mode>");
                 Console.Error.WriteLine("Available modes:");
-                Console.Error.WriteLine("  admission: Admission controller that injects sidecar pods where requested.");
                 Console.Error.WriteLine("  orchestrate: Watches for AutoCraneDeployment CRDs, creates Kubernetes pods for apps.");
                 Console.Error.WriteLine("  datadeployinit: Init container process to ensure data directories are set up before app runs.");
                 Console.Error.WriteLine("  datadeploy: Sidecar which updates app to use new data folders when requested.");
@@ -66,6 +65,17 @@ namespace AutoCrane
 
                     case "yaml":
                         return GenerateYaml.Run(newargs);
+
+                    case "datadeployinit":
+                        return DependencyInjection.GetServiceProvider(newargs).GetRequiredService<DataDeployInit>().RunAsync().GetAwaiter().GetResult();
+
+                    case "datadeploy":
+                        WebHosting.RunWebService<DataDeployer>(newargs);
+                        return 0;
+
+                    case "datarepo":
+                        WebHosting.RunWebService<DataRepository>(newargs);
+                        return 0;
 
                     default:
                         Console.Error.WriteLine($"Mode {mode} not found");

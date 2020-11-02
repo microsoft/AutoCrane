@@ -11,6 +11,7 @@ namespace AutoCrane.Models
     {
         internal const string Prefix = "status.autocrane.io/";
         internal const string ErrorLevel = "error";
+        internal const string InfoLevel = "info";
 
         public static ISet<string> ValidLevels { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "error", "warning", "info" };
 

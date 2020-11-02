@@ -11,7 +11,7 @@ namespace AutoCrane.Tests
         [TestMethod]
         public void TestLineFeeds()
         {
-            string? dir = Directory.GetCurrentDirectory();
+            var dir = Directory.GetCurrentDirectory();
             string? root = null;
             for (var i = 0; i < 20 && !string.IsNullOrEmpty(dir); i++)
             {

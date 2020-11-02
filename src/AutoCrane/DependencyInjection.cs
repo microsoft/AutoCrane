@@ -36,12 +36,25 @@ namespace AutoCrane
             services.AddSingleton<IAutoCraneConfig, AutoCraneConfig>();
             services.AddSingleton<IClock, DefaultClock>();
             services.AddSingleton<IMonkeyWorkload, MonkeyWorkload>();
+            services.AddSingleton<IDataDownloader, DataDownloader>();
+            services.AddSingleton<IDataLinker, DataLinker>();
+            services.AddSingleton<IDataDownloadRequestFactory, DataDownloadRequestFactory>();
+            services.AddSingleton<IDataRepositoryManifestReaderFactory, DataRepositoryManifestReaderFactory>();
+            services.AddSingleton<IServiceHeartbeat, ServiceHeartbeat>();
+            services.AddSingleton<IDataRepositorySyncer, DataRepositorySyncer>();
+            services.AddSingleton<IDataRepositoryManifestWriter, DataRepositoryManifestWriter>();
+            services.AddSingleton<IDataRepositoryFetcher, DataRepositoryGitFetcher>();
+            services.AddSingleton<IProcessRunner, ProcessRunner>();
+            services.AddSingleton<IDataRepositoryManifestFetcher, DataRepositoryManifestFetcher>();
+            services.AddSingleton<IFileHasher, FileHasher>();
+            services.AddSingleton<IPodDataRequestGetter, PodDataRequestGetter>();
 
             services.AddSingleton<KubernetesClient>();
             services.AddSingleton<WatchdogProber>();
             services.AddSingleton<GetWatchdogService>();
             services.AddSingleton<PostWatchdogService>();
             services.AddSingleton<Orchestrator>();
+            services.AddSingleton<DataDeployInit>();
             services.AddLogging(logging =>
             {
                 logging.ClearProviders();
@@ -62,6 +75,7 @@ namespace AutoCrane
             services.Configure<KubernetesConfig>(configuration.GetSection("Kubeconfig"));
             services.Configure<AutoCraneOptions>(configuration.GetSection("AutoCrane"));
             services.Configure<WatchdogHealthzOptions>(configuration.GetSection("Watchdogs"));
+            services.Configure<DataRepoOptions>(configuration.GetSection("DataRepo"));
         }
 
         internal static ServiceProvider GetServiceProvider(string[] args)
