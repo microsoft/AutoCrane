@@ -48,6 +48,7 @@ namespace AutoCrane
             services.AddSingleton<IDataRepositoryManifestFetcher, DataRepositoryManifestFetcher>();
             services.AddSingleton<IFileHasher, FileHasher>();
             services.AddSingleton<IPodDataRequestGetter, PodDataRequestGetter>();
+            services.AddSingleton<IDataDeploymentRequestProcessor, DataDeploymentRequestProcessor>();
 
             services.AddSingleton<KubernetesClient>();
             services.AddSingleton<WatchdogProber>();
@@ -87,7 +88,7 @@ namespace AutoCrane
 
         private static void GetConsoleLogger(LoggerSinkConfiguration a)
         {
-            a.Console(outputTemplate: "{Timestamp:MM/dd/yyyy HH:mm:ss.fff}:{Level:u3}: {Message:lj}{NewLine}");
+            a.Console(outputTemplate: "{Level:u1}:{Timestamp:yyyyMMdd HH:mm:ss.fff}: {Message:lj}{NewLine}");
         }
     }
 }

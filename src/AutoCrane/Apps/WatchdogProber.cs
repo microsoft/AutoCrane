@@ -20,7 +20,7 @@ namespace AutoCrane.Apps
         private const string ProbeAnnotationPrefix = "probe.autocrane.io/";
         private const string WatchdogUrlRegexString = "POD_IP:([0-9]+)/([A-Za-z0-9_-]+)";
         private const int ConsecutiveErrorCountBeforeExiting = 5;
-        private const int IterationLoopSeconds = 10;
+        private const int IterationLoopSeconds = 30;
         private static readonly Regex WatchdogUrlRegex = new Regex(WatchdogUrlRegexString, RegexOptions.Compiled);
         private readonly IAutoCraneConfig config;
         private readonly IPodGetter podGetter;

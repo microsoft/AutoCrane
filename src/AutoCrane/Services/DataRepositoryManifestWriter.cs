@@ -34,8 +34,10 @@ namespace AutoCrane.Services
         public async Task WriteAsync(DataRepositoryManifest manifest)
         {
             this.logger.LogInformation($"Writing manifest for {this.ManifestFilePath}");
-            using var fs = File.OpenWrite(this.ManifestFilePath);
+            var tmpFile = this.ManifestFilePath + ".tmp";
+            using var fs = File.Create(tmpFile);
             await JsonSerializer.SerializeAsync(fs, manifest);
+            File.Move(tmpFile, this.ManifestFilePath);
         }
     }
 }

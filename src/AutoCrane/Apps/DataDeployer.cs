@@ -1,17 +1,15 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-using System;
 using System.IO;
 using AutoCrane.Interfaces;
-using AutoCrane.Models;
+using AutoCrane.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace AutoCrane.Apps
 {
@@ -21,6 +19,7 @@ namespace AutoCrane.Apps
         public void ConfigureServices(IServiceCollection services)
         {
             DependencyInjection.Setup(new ConfigurationBuilder().AddEnvironmentVariables().Build(), services);
+            services.AddHostedService<DataDeploymentBackgroundSync>();
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "ASP.NET")]
@@ -33,6 +32,27 @@ namespace AutoCrane.Apps
                 endpoints.MapGet("/ping", (ctx) =>
                 {
                     return ctx.Response.WriteAsync("ok");
+                });
+
+                endpoints.MapGet("/watchdog", (ctx) =>
+                {
+                    var hb = ctx.RequestServices.GetRequiredService<IServiceHeartbeat>();
+                    var logger = ctx.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(DataDeployer));
+                    var lastBeat = hb.GetLastBeat(nameof(DataDeploymentBackgroundSync));
+                    if (!lastBeat.HasValue || lastBeat.Value > DataDeploymentBackgroundSync.HeartbeatTimeout)
+                    {
+                        ctx.Response.StatusCode = 500;
+                        var msg = $"Error, last heartbeat (zero if none): {lastBeat}";
+                        logger.LogInformation(msg);
+                        return ctx.Response.WriteAsync(msg);
+                    }
+                    else
+                    {
+                        ctx.Response.StatusCode = 200;
+                        var msg = $"Ok, last heartbeat: {lastBeat}";
+                        logger.LogInformation(msg);
+                        return ctx.Response.WriteAsync("ok");
+                    }
                 });
             });
         }

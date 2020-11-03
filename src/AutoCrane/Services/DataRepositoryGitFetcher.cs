@@ -16,8 +16,8 @@ namespace AutoCrane.Services
     {
         private const string GitExe = "/usr/bin/git";
         private const string ZstdExe = "/usr/bin/zstd";
-        private const string GitCloneDepthString = "6";
-        private const string GitDepthString = "5";
+        private const string GitCloneDepthString = "3";
+        private const string GitLogDepthString = "2"; // needs to be less than clone depth
         private readonly ILogger<DataRepositoryGitFetcher> logger;
         private readonly IProcessRunner runner;
         private readonly IFileHasher fileHasher;
@@ -95,7 +95,7 @@ namespace AutoCrane.Services
         {
             var logEntries = new List<GitLogEntry>();
 
-            var result = await this.runner.RunAsync(GitExe, scratchDir, new string[] { "log", "--format=%H %ct", $"HEAD~{GitDepthString}..HEAD" }, token);
+            var result = await this.runner.RunAsync(GitExe, scratchDir, new string[] { "log", "--format=%H %ct", $"-{GitLogDepthString}" }, token);
             result.ThrowIfFailed();
 
             foreach (var line in result.OutputText)
@@ -125,7 +125,7 @@ namespace AutoCrane.Services
                 throw new ArgumentNullException(nameof(url));
             }
 
-            var result = await this.runner.RunAsync(GitExe, dir, new string[] { "pull", "origin", "--depth", GitDepthString }, token);
+            var result = await this.runner.RunAsync(GitExe, dir, new string[] { "pull", "origin", "--depth", GitCloneDepthString }, token);
             result.ThrowIfFailed();
         }
 

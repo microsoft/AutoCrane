@@ -5,6 +5,8 @@ AutoCrane is a Kubernetes operator that helps you safely ship container services
 
 Another important feature is the concept of a data deployment. Applications often depend on data or configuration files. For applications that take a long time to start, we would prefer to update this data in a safe manner without restarting the application. Updating one of the data sources is called a data deployment. One might expect to see a new data deployment happening every couple of minutes, and turning these into application deployments would not be desirable due to extra resources consumed during application startup.
 
+AutoCrane attempts to be stateless, relying on state stored in Kubernetes through annotations/labels. The data deployment mechanisms work with regular files--giving you the freedom to choose any underlying volume type. Its features are intended to be modular so you can choose what you'd like--whether it be watchdog behavior or data deployment functionality and combine it with other GitOps or CI/CD tools.
+
 # AutoCrane
 
 ## Components

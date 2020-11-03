@@ -97,7 +97,6 @@ namespace AutoCrane.Services
         {
             try
             {
-                this.logger.LogInformation($"ReadNamespacedPodAsync {podName.Namespace} {podName.Name}");
                 var existingPod = await this.client.ReadNamespacedPodAsync(podName.Name, podName.Namespace);
                 var annotations = existingPod.Annotations();
                 if (annotations == null)

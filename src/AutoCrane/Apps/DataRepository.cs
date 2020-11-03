@@ -42,7 +42,7 @@ namespace AutoCrane.Apps
                     if (!lastDataRepoCrawl.HasValue || lastDataRepoCrawl.Value > DataRepositoryCrawler.HeartbeatTimeout)
                     {
                         ctx.Response.StatusCode = 500;
-                        logger.LogError($"crawler not running");
+                        logger.LogError($"crawler not running, last heartbeat: {lastDataRepoCrawl.GetValueOrDefault().TotalSeconds} sec ago.");
                         return ctx.Response.WriteAsync("crawler not running");
                     }
 
