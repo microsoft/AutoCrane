@@ -201,8 +201,8 @@ spec:
         image: !!IMAGE!!
         imagePullPolicy: !!PULL!!
         ports:
-        - containerPort: 8080
-          name: http
+          - containerPort: 8080
+            name: http
         env:
           - name: AUTOCRANE_ARGS
             value: watchdogprober
@@ -302,8 +302,135 @@ spec:
             - mountPath: /data
               name: test-volume
         ports:
-        - containerPort: 8080
-          name: http
+          - containerPort: 8080
+            name: http
+        env:
+          - name: AUTOCRANE_ARGS
+            value: testworkload
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50M
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: http
+          periodSeconds: 60
+          timeoutSeconds: 10
+        startupProbe:
+          httpGet:
+            path: /ping
+            port: http
+          failureThreshold: 30
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 10
+      - name: data
+        image: !!IMAGE!!
+        imagePullPolicy: !!PULL!!
+        volumeMounts:
+            - mountPath: /data
+              name: test-volume
+        ports:
+          - containerPort: 8082
+            name: watchdog
+        readinessProbe:
+          httpGet:
+            path: /watchdog
+            port: watchdog
+          failureThreshold: 1
+          periodSeconds: 20
+          timeoutSeconds: 10
+        env:
+          - name: AUTOCRANE_ARGS
+            value: datadeploy
+          - name: LISTEN_PORT
+            value: ""8082""
+          - name: Pod__Name
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: Pod__Namespace
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+      - name: watchdoghealthz
+        image: !!IMAGE!!
+        imagePullPolicy: !!PULL!!
+        ports:
+          - containerPort: 8081
+            name: watchdog
+        env:
+          - name: AUTOCRANE_ARGS
+            value: watchdoghealthz
+          - name: LISTEN_PORT
+            value: ""8081""
+          - name: Watchdogs__AlwaysHealthyAfterSeconds
+            value: ""600""
+          - name: Pod__Name
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: Pod__Namespace
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50M
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: watchdog
+          failureThreshold: 1
+          periodSeconds: 20
+          timeoutSeconds: 10
+      serviceAccountName: testworkload
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: testworkloadnoinit
+  namespace: !!NAMESPACE!!
+  labels:
+    app.kubernetes.io/name: testworkload2
+    app.kubernetes.io/part-of: autocrane
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: testworkload2
+  replicas: !!TESTWORKLOAD_REPLICAS!!
+  template:
+    metadata:
+      annotations:
+        probe.autocrane.io/watchdog1: POD_IP:8080/watchdog
+        probe.autocrane.io/datadeploy: POD_IP:8082/watchdog
+        store.autocrane.io/location: /data
+        data.autocrane.io/data1: autocranegit
+      labels:
+        app.kubernetes.io/name: testworkload2
+        app.kubernetes.io/part-of: autocrane
+    spec:
+      volumes:
+          - name: test-volume
+            emptyDir: {}
+      containers:
+      - name: testworkload
+        image: !!IMAGE!!
+        imagePullPolicy: !!PULL!!
+        volumeMounts:
+            - mountPath: /data
+              name: test-volume
+        ports:
+          - containerPort: 8080
+            name: http
         env:
           - name: AUTOCRANE_ARGS
             value: testworkload
@@ -348,39 +475,20 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-      - name: watchdoghealthz
-        image: !!IMAGE!!
-        imagePullPolicy: !!PULL!!
         ports:
-        - containerPort: 8080
-          name: http
-        - containerPort: 8081
-          name: watchdog
-        env:
-          - name: AUTOCRANE_ARGS
-            value: watchdoghealthz
-          - name: LISTEN_PORT
-            value: ""8081""
-          - name: Watchdogs__AlwaysHealthyAfterSeconds
-            value: ""600""
-          - name: Pod__Name
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.name
-          - name: Pod__Namespace
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace
+          - containerPort: 8082
+            name: watchdog
+        readinessProbe:
+          httpGet:
+            path: /watchdog
+            port: watchdog
+          failureThreshold: 1
+          periodSeconds: 20
+          timeoutSeconds: 10
         resources:
           requests:
             cpu: 100m
             memory: 50M
-        readinessProbe:
-          httpGet:
-            path: /healthz
-            port: watchdog
-          failureThreshold: 1
-          periodSeconds: 20
       serviceAccountName: testworkload
       nodeSelector:
         beta.kubernetes.io/os: linux
@@ -491,7 +599,7 @@ spec:
                 ["pull"] = "Never", // for local development
                 ["autocrane_replicas"] = "1",
                 ["watchdogprober_replicas"] = "1",
-                ["testworkload_replicas"] = "3",
+                ["testworkload_replicas"] = "2",
                 ["datarepo_replicas"] = "1",
                 ["use_watchdogprober"] = "1",
                 ["use_testworkload"] = "0",

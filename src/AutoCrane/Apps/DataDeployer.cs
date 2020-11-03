@@ -39,16 +39,18 @@ namespace AutoCrane.Apps
                     var hb = ctx.RequestServices.GetRequiredService<IServiceHeartbeat>();
                     var logger = ctx.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(DataDeployer));
                     var lastBeat = hb.GetLastBeat(nameof(DataDeploymentBackgroundSync));
-                    if (!lastBeat.HasValue || lastBeat > DataDeploymentBackgroundSync.HeartbeatTimeout)
+                    if (!lastBeat.HasValue || lastBeat.Value > DataDeploymentBackgroundSync.HeartbeatTimeout)
                     {
                         ctx.Response.StatusCode = 500;
-                        var msg = $"Error, last heartbeat: {lastBeat.GetValueOrDefault().TotalMinutes} min ago.";
+                        var msg = $"Error, last heartbeat (zero if none): {lastBeat.GetValueOrDefault().TotalSeconds} sec ago.";
                         logger.LogInformation(msg);
                         return ctx.Response.WriteAsync(msg);
                     }
                     else
                     {
                         ctx.Response.StatusCode = 200;
+                        var msg = $"Ok, last heartbeat: {lastBeat.GetValueOrDefault().TotalSeconds} sec ago.";
+                        logger.LogInformation(msg);
                         return ctx.Response.WriteAsync("ok");
                     }
                 });
