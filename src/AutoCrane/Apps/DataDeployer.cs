@@ -42,14 +42,14 @@ namespace AutoCrane.Apps
                     if (!lastBeat.HasValue || lastBeat.Value > DataDeploymentBackgroundSync.HeartbeatTimeout)
                     {
                         ctx.Response.StatusCode = 500;
-                        var msg = $"Error, last heartbeat (zero if none): {lastBeat.GetValueOrDefault().TotalSeconds} sec ago.";
+                        var msg = $"Error, last heartbeat (zero if none): {lastBeat}";
                         logger.LogInformation(msg);
                         return ctx.Response.WriteAsync(msg);
                     }
                     else
                     {
                         ctx.Response.StatusCode = 200;
-                        var msg = $"Ok, last heartbeat: {lastBeat.GetValueOrDefault().TotalSeconds} sec ago.";
+                        var msg = $"Ok, last heartbeat: {lastBeat}";
                         logger.LogInformation(msg);
                         return ctx.Response.WriteAsync("ok");
                     }
