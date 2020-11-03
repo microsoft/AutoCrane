@@ -95,7 +95,7 @@ namespace AutoCrane.Services
         {
             var logEntries = new List<GitLogEntry>();
 
-            var result = await this.runner.RunAsync(GitExe, scratchDir, new string[] { "log", "--format=%H %ct", $"HEAD~{GitDepthString}..HEAD" }, token);
+            var result = await this.runner.RunAsync(GitExe, scratchDir, new string[] { "log", "--format=%H %ct", $"-{GitDepthString}" }, token);
             result.ThrowIfFailed();
 
             foreach (var line in result.OutputText)

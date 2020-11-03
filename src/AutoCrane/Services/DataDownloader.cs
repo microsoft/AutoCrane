@@ -4,8 +4,6 @@
 using System;
 using System.IO;
 using System.Net.Http;
-using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoCrane.Interfaces;
@@ -29,7 +27,7 @@ namespace AutoCrane.Services
             this.fileHasher = fileHasher;
         }
 
-        public async Task DownloadAsync(DataDownloadRequest request)
+        public async Task DownloadAsync(DataDownloadRequest request, CancellationToken token)
         {
             if (request.Details.Hash is null || request.Details.Path is null)
             {
@@ -48,15 +46,15 @@ namespace AutoCrane.Services
                 {
                     var dropUrl = $"http://datarepo/{request.RepoName}/{request.Details.Path}";
                     this.logger.LogInformation($"Downloading {dropUrl} to {dropArchive}");
-                    var data = await this.client.GetAsync(dropUrl);
+                    var data = await this.client.GetAsync(dropUrl, token);
                     data.EnsureSuccessStatusCode();
                     using var fs = File.Create(dropArchive);
-                    await data.Content.CopyToAsync(fs);
+                    await data.Content.CopyToAsync(fs, token);
                     fs.Close();
                     await this.VerifyHashAsync(dropArchive, request.Details.Hash);
                     this.logger.LogInformation($"Extacting {dropArchive} to {request.ExtractionLocation}");
                     Directory.CreateDirectory(request.ExtractionLocation);
-                    await this.ExtractArchiveAsync(dropArchive, request.ExtractionLocation, CancellationToken.None);
+                    await this.ExtractArchiveAsync(dropArchive, request.ExtractionLocation, token);
                 }
                 catch (Exception e)
                 {

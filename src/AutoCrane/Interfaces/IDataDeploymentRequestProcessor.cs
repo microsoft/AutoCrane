@@ -3,12 +3,11 @@
 
 using System.Threading;
 using System.Threading.Tasks;
-using AutoCrane.Models;
 
 namespace AutoCrane.Interfaces
 {
-    public interface IDataDownloader
+    public interface IDataDeploymentRequestProcessor
     {
-        Task DownloadAsync(DataDownloadRequest request, CancellationToken token);
+        Task HandleRequestsAsync(CancellationToken token);
     }
 }

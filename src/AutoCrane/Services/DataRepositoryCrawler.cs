@@ -108,8 +108,10 @@ namespace AutoCrane.Services
                     this.heartbeat.Beat(nameof(DataRepositoryCrawler));
                 }
 
-                await Task.Delay(HeartbeatTimeout / 2, stoppingToken);
+                await Task.Delay(HeartbeatTimeout / 4, stoppingToken);
             }
+
+            this.logger.LogInformation($"Exiting DataRepositoryCrawler");
         }
     }
 }

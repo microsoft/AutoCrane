@@ -265,8 +265,10 @@ spec:
     metadata:
       annotations:
         probe.autocrane.io/watchdog1: POD_IP:8080/watchdog
+        probe.autocrane.io/datadeploy: POD_IP:8082/watchdog
         store.autocrane.io/location: /data
         data.autocrane.io/data1: autocranegit
+        data.autocrane.io/data2: autocranegit
       labels:
         app.kubernetes.io/name: testworkload
         app.kubernetes.io/part-of: autocrane
@@ -275,7 +277,7 @@ spec:
           - name: test-volume
             emptyDir: {}
       initContainers:
-          - name: setup-vol-1
+          - name: init1
             image: !!IMAGE!!
             imagePullPolicy: !!PULL!!
             volumeMounts:
@@ -378,6 +380,7 @@ spec:
             path: /healthz
             port: watchdog
           failureThreshold: 1
+          periodSeconds: 20
       serviceAccountName: testworkload
       nodeSelector:
         beta.kubernetes.io/os: linux
