@@ -14,6 +14,7 @@ namespace AutoCrane.Services
 {
     internal sealed class ProcessRunner : IProcessRunner
     {
+        private const string SecretMaskString = "***secret***";
         private readonly ILogger<ProcessRunner> logger;
 
         public ProcessRunner(ILoggerFactory loggerFactory)
@@ -21,7 +22,12 @@ namespace AutoCrane.Services
             this.logger = loggerFactory.CreateLogger<ProcessRunner>();
         }
 
-        public async Task<IProcessResult> RunAsync(string exe, string? workingDir, string[] args, CancellationToken cancellationToken)
+        public Task<IProcessResult> RunAsync(string exe, string? workingDir, string[] args, CancellationToken cancellationToken)
+        {
+            return this.RunAsync(exe, workingDir, args, cancellationToken, Array.Empty<string>());
+        }
+
+        public async Task<IProcessResult> RunAsync(string exe, string? workingDir, string[] args, CancellationToken cancellationToken, string[] secretsToMask)
         {
             var result = new ProcessResult()
             {
@@ -70,11 +76,21 @@ namespace AutoCrane.Services
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            this.logger.LogInformation($"Running: {exe} {string.Join(' ', args.Select(a => $"\"{a}\""))}");
+            this.logger.LogInformation($"Running: {exe} {string.Join(' ', args.Select(a => $"\"{MaskSecrets(a, secretsToMask)}\""))}");
             await process.WaitForExitAsync(cancellationToken);
 
             result.ExitCode = process.ExitCode;
             return result;
+        }
+
+        private static string MaskSecrets(string str, string[] secretsToMask)
+        {
+            foreach (var secret in secretsToMask)
+            {
+                str = str.Replace(secret, SecretMaskString);
+            }
+
+            return str;
         }
 
         private class ProcessResult : IProcessResult

@@ -83,7 +83,9 @@ namespace AutoCrane.Services
                     {
                         var fullArchivePath = Path.Combine(archivePath, repo.Key);
                         Directory.CreateDirectory(fullArchivePath);
-                        var newSources = await this.repoSyncer.SyncRepoAsync(sourcePath, fullArchivePath, repo.Value, stoppingToken);
+                        var fullSourcePath = Path.Combine(sourcePath, repo.Key);
+                        Directory.CreateDirectory(fullSourcePath);
+                        var newSources = await this.repoSyncer.SyncRepoAsync(fullSourcePath, fullArchivePath, repo.Value, stoppingToken);
                         sourceList[repo.Key] = newSources;
                     }
                     catch (Exception e)

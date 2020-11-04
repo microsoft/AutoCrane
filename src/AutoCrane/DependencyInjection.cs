@@ -49,6 +49,8 @@ namespace AutoCrane
             services.AddSingleton<IFileHasher, FileHasher>();
             services.AddSingleton<IPodDataRequestGetter, PodDataRequestGetter>();
             services.AddSingleton<IDataDeploymentRequestProcessor, DataDeploymentRequestProcessor>();
+            services.AddSingleton<ICredentialHelper, CredentialHelper>();
+            services.AddSingleton<ICredentialProvider, CredentialProviderForEnvironmentVariables>();
 
             services.AddSingleton<KubernetesClient>();
             services.AddSingleton<WatchdogProber>();
