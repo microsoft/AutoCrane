@@ -268,7 +268,7 @@ spec:
         probe.autocrane.io/datadeploy: POD_IP:8082/watchdog
         store.autocrane.io/location: /data
         data.autocrane.io/data1: autocranegit
-        data.autocrane.io/data2: autocranegit
+        data.autocrane.io/data2: data2
       labels:
         app.kubernetes.io/name: testworkload
         app.kubernetes.io/part-of: autocrane
@@ -562,7 +562,12 @@ spec:
           - name: DataRepo__SourcePath
             value: /data/source
           - name: DataRepo__Sources
-            value: ""autocranegit:git@https://github.com/microsoft/AutoCrane.git""
+            value: ""!!DATAREPO_SOURCES!!""
+          - name: AdoGitPat
+            valueFrom:
+              secretKeyRef:
+                name: ado-secrets
+                key: AdoPat
         resources:
           requests:
             cpu: 100m
@@ -604,6 +609,7 @@ spec:
                 ["use_watchdogprober"] = "1",
                 ["use_testworkload"] = "0",
                 ["use_datarepo"] = "1",
+                ["datarepo_sources"] = "autocranegit:git@https://github.com/microsoft/AutoCrane.git;data2:git@https://github.com/microsoft/AutoCrane.git",
             };
 
             foreach (var arg in args)
