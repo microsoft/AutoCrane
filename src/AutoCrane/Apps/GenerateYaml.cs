@@ -142,7 +142,7 @@ spec:
                 fieldPath: metadata.namespace
         resources:
           requests:
-            cpu: 100m
+            cpu: !!CPU!!
             memory: 50M
       serviceAccountName: autocrane
       nodeSelector:
@@ -212,7 +212,7 @@ spec:
                 fieldPath: metadata.namespace
         resources:
           requests:
-            cpu: 100m
+            cpu: !!CPU!!
             memory: 50M
       serviceAccountName: watchdogprober
       nodeSelector:
@@ -309,7 +309,7 @@ spec:
             value: testworkload
         resources:
           requests:
-            cpu: 100m
+            cpu: !!CPU!!
             memory: 50M
         livenessProbe:
           httpGet:
@@ -381,7 +381,7 @@ spec:
                 fieldPath: metadata.namespace
         resources:
           requests:
-            cpu: 100m
+            cpu: !!CPU!!
             memory: 50M
         readinessProbe:
           httpGet:
@@ -436,7 +436,7 @@ spec:
             value: testworkload
         resources:
           requests:
-            cpu: 100m
+            cpu: !!CPU!!
             memory: 50M
         livenessProbe:
           httpGet:
@@ -487,7 +487,7 @@ spec:
           timeoutSeconds: 10
         resources:
           requests:
-            cpu: 100m
+            cpu: !!CPU!!
             memory: 50M
       serviceAccountName: testworkload
       nodeSelector:
@@ -563,14 +563,9 @@ spec:
             value: /data/source
           - name: DataRepo__Sources
             value: ""!!DATAREPO_SOURCES!!""
-          - name: AdoGitPat
-            valueFrom:
-              secretKeyRef:
-                name: ado-secrets
-                key: AdoPat
         resources:
           requests:
-            cpu: 100m
+            cpu: !!CPU!!
             memory: 50M
         livenessProbe:
           httpGet:
@@ -602,6 +597,7 @@ spec:
                 ["namespace"] = "autocrane",
                 ["image"] = "autocrane",
                 ["pull"] = "Never", // for local development
+                ["cpu"] = "10m",
                 ["autocrane_replicas"] = "1",
                 ["watchdogprober_replicas"] = "1",
                 ["testworkload_replicas"] = "2",

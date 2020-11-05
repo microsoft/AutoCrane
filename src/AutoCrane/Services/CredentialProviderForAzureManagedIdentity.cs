@@ -48,9 +48,9 @@ namespace AutoCrane.Services
 
         public async Task<string> RequestManagedIdentityTokenAsync(string resource)
         {
-            var url = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource={resource}";
+            var url = $"http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource={resource}";
             this.logger.LogInformation($"GET {url}");
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource={resource}");
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Add("Metadata", "true");
             using var response = await this.client.SendAsync(request);
             response.EnsureSuccessStatusCode();

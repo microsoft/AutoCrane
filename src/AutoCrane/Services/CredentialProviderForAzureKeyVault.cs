@@ -48,32 +48,39 @@ namespace AutoCrane.Services
                 throw new NotImplementedException($"spec {spec} not {Protocol}");
             }
 
-            var kvRootUrl = $"https://{kvName}.vault.azure.net";
-            var kvAccessTokenJson = await this.managedIdentity.RequestManagedIdentityTokenAsync(kvRootUrl);
-            using var json = JsonDocument.Parse(kvAccessTokenJson);
-            string? accessToken = null;
-            foreach (var prop in json.RootElement.EnumerateObject())
-            {
-                if (prop.Name == "access_token")
-                {
-                    accessToken = prop.Value.GetString();
-                    break;
-                }
-            }
+            var kvResourceUrl = "https://vault.azure.net";
+            var kvAccessTokenJson = await this.managedIdentity.RequestManagedIdentityTokenAsync(kvResourceUrl);
+            var accessToken = ReadJsonValue(kvAccessTokenJson, "access_token");
 
-            if (accessToken is null)
-            {
-                throw new InvalidDataException(nameof(kvAccessTokenJson));
-            }
-
-            var requestUrl = $"{kvRootUrl}/secrets/{kvSecret}?api-version=7.0";
+            var requestUrl = $"https://{kvName}.vault.azure.net/secrets/{kvSecret}?api-version=7.0";
             this.logger.LogInformation($"GET {requestUrl}");
             using var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
             using var response = await this.client.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            var secret = await response.Content.ReadAsStringAsync();
-            return secret;
+            var secretJson = await response.Content.ReadAsStringAsync();
+            return ReadJsonValue(secretJson, "value");
+        }
+
+        private static string ReadJsonValue(string jsonString, string property)
+        {
+            using var json = JsonDocument.Parse(jsonString);
+            string? val = null;
+            foreach (var prop in json.RootElement.EnumerateObject())
+            {
+                if (prop.Name == property)
+                {
+                    val = prop.Value.GetString();
+                    break;
+                }
+            }
+
+            if (val is null)
+            {
+                throw new InvalidDataException($"Cannot read property '{property}' in json string.");
+            }
+
+            return val;
         }
     }
 }
