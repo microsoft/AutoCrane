@@ -16,13 +16,12 @@
     <PackageReference Include="System.Text.Json" Version="5.0.0-rc.2.20475.5" />
   </ItemGroup>
 
-
     <Target Name="DockerBuildScript" AfterTargets="AfterBuild" DependsOnTargets="CoreCompile" Condition="!Exists('$(MSBuildProjectDirectory)/../../build-docker.bat') AND !Exists('/source') AND Exists('$(MSBuildProjectDirectory)/../../generate-build-docker.bat')">
-        <Exec Command="minikube docker-env --shell=cmd" ConsoleToMsBuild="true" >
+        <Exec Command="minikube docker-env --shell=cmd" ConsoleToMsBuild="true">
             <Output TaskParameter="ConsoleOutput" PropertyName="DockerBuildLines" />
         </Exec>
-        <WriteLinesToFile Lines="$(DockerBuildLines)" File="$(MSBuildProjectDirectory)/../../build-docker.bat"/>
-        <WriteLinesToFile Lines="docker build . -t autocrane" File="$(MSBuildProjectDirectory)/../../build-docker.bat" Overwrite="false"/>
+        <WriteLinesToFile Lines="$(DockerBuildLines)" File="$(MSBuildProjectDirectory)/../../build-docker.bat" />
+        <WriteLinesToFile Lines="docker build . -t autocrane" File="$(MSBuildProjectDirectory)/../../build-docker.bat" Overwrite="false" />
     </Target>
 
     <Target Name="BuildDockerImage" AfterTargets="DockerBuildScript" DependsOnTargets="DockerBuildScript" Condition="Exists('$(MSBuildProjectDirectory)/../../build-docker.bat') AND !Exists('/source')">

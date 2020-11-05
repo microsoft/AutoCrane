@@ -7,10 +7,12 @@ RUN dotnet restore -r linux-musl-x64
 
 COPY src/AutoCrane/. /source/src/AutoCrane
 #RUN dotnet publish -c release -o /app -r linux-musl-x64 --self-contained true --no-restore /p:PublishTrimmed=true /p:PublishReadyToRun=true
-RUN dotnet publish -c release -o /app -r linux-musl-x64 --self-contained true --no-restore
+#RUN dotnet publish -c release -o /app -r linux-musl-x64 --self-contained true --no-restore
+RUN dotnet publish -c release -o /app -r linux-musl-x64 --self-contained false --no-restore
 
-FROM mcr.microsoft.com/dotnet/runtime-deps:5.0-alpine
+FROM mcr.microsoft.com/dotnet/aspnet:5.0-alpine
 RUN apk add git zstd
 WORKDIR /app
 COPY --from=build /app ./
-ENTRYPOINT ["./AutoCrane"]
+COPY --from=build /source/src/AutoCrane/my.runtimeconfig.json ./AutoCrane.runtimeconfig.json
+ENTRYPOINT ["dotnet", "./AutoCrane.dll"]
