@@ -42,7 +42,7 @@ namespace AutoCrane.Services
                 throw new InvalidOperationException($"No fetcher for protocol {protocol}");
             }
 
-            var newEntries = await fetcher.FetchAsync(repoSplits[1], scratchDir, archiveDir, cancellationToken);
+            var newEntries = await fetcher.FetchAsync(repoString, scratchDir, archiveDir, cancellationToken);
             list.AddRange(newEntries);
 
             return list;

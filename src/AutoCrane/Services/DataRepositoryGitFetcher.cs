@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoCrane.Interfaces;
@@ -18,32 +19,65 @@ namespace AutoCrane.Services
         private const string ZstdExe = "/usr/bin/zstd";
         private const string GitCloneDepthString = "3";
         private const string GitLogDepthString = "2"; // needs to be less than clone depth
+        private const string ProtocolGit = "git";
+        private const string ProtocolAdoGit = "adogit";
         private readonly ILogger<DataRepositoryGitFetcher> logger;
         private readonly IProcessRunner runner;
         private readonly IFileHasher fileHasher;
+        private readonly ICredentialHelper credentialHelper;
 
-        public DataRepositoryGitFetcher(ILoggerFactory loggerFactory, IProcessRunner runner, IFileHasher fileHasher)
+        public DataRepositoryGitFetcher(ILoggerFactory loggerFactory, IProcessRunner runner, IFileHasher fileHasher, ICredentialHelper credentialHelper)
         {
             this.logger = loggerFactory.CreateLogger<DataRepositoryGitFetcher>();
             this.runner = runner;
             this.fileHasher = fileHasher;
+            this.credentialHelper = credentialHelper;
         }
 
         public bool CanFetch(string protocol)
         {
-            return protocol == "git";
+            return protocol == ProtocolGit || protocol == ProtocolAdoGit;
         }
 
         public async Task<IReadOnlyList<DataRepositorySource>> FetchAsync(string url, string scratchDir, string archiveDropDir, CancellationToken token)
         {
             this.logger.LogInformation($"FetchAsync {url} {scratchDir} {archiveDropDir}");
+            var protocolAndUrl = url.Split('@', 2);
+            if (protocolAndUrl.Length != 2)
+            {
+                throw new ArgumentOutOfRangeException(nameof(url));
+            }
+
+            var protocol = protocolAndUrl[0];
+            url = protocolAndUrl[1];
+            string? creds = null;
+            switch (protocol)
+            {
+                case ProtocolGit:
+                    break;
+                case ProtocolAdoGit:
+                    var credsAndUrl = url.Split('@', 2);
+                    if (credsAndUrl.Length != 2)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(url));
+                    }
+
+                    var credSpec = credsAndUrl[0];
+                    url = credsAndUrl[1];
+                    var rawCreds = await this.credentialHelper.LookupAsync(credSpec);
+                    creds = Convert.ToBase64String(Encoding.UTF8.GetBytes($":{rawCreds}"));
+                    break;
+                default:
+                    throw new NotImplementedException($"protocol: {protocol}");
+            }
+
             if (Directory.Exists(Path.Combine(scratchDir, ".git")))
             {
                 await this.GitSyncAsync(url, scratchDir, token);
             }
             else
             {
-                await this.GitCloneAsync(url, scratchDir, token);
+                await this.GitCloneAsync(url, scratchDir, creds, token);
             }
 
             if (token.IsCancellationRequested)
@@ -111,10 +145,25 @@ namespace AutoCrane.Services
             return logEntries;
         }
 
-        private async Task GitCloneAsync(string url, string dir, CancellationToken token)
+        private async Task GitCloneAsync(string url, string dir, string? creds, CancellationToken token)
         {
-            var result = await this.runner.RunAsync(GitExe, dir, new string[] { "clone", url, ".", "--depth", GitCloneDepthString }, token);
+            IProcessResult? result;
+            if (creds == null)
+            {
+                result = await this.runner.RunAsync(GitExe, dir, new string[] { "clone", url, ".", "--depth", GitCloneDepthString }, token);
+            }
+            else
+            {
+                result = await this.runner.RunAsync(GitExe, dir, new string[] { "-c", $"http.extraheader=authorization: basic {creds}", "clone", url, ".", "--depth", GitCloneDepthString }, token, new string[] { creds });
+            }
+
             result.ThrowIfFailed();
+
+            if (creds != null)
+            {
+                result = await this.runner.RunAsync(GitExe, dir, new string[] { "config", "--local", "http.extraheader", $"authorization: basic {creds}" }, token, new string[] { creds });
+                result.ThrowIfFailed();
+            }
         }
 
         private async Task GitSyncAsync(string url, string dir, CancellationToken token)

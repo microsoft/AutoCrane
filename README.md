@@ -25,13 +25,11 @@ AutoCrane attempts to be stateless, relying on state stored in Kubernetes throug
 AutoCrane components consumes the following pod annotations set by you:
   - `probe.autocrane.io/NAME: POD_IP:1234/url` For WatchdogProber: Sets up a watchdog called `NAME` by probing `http://POD_IP:1234/url`
   - `store.autocrane.io/location: /data` For DataDeployer: Sets where data is downloaded to.
-  - `data.autocrane.io/NAME: srcname` For AutoCrane: Sets up a pod-local data deployment called `NAME`. AutoCrane will set the `request.data.autocrane.io/NAME` field.
-  - `data.autocrane.io/srcname: git:https://github.com/microsoft/AutoCrane.git` For DataRepository: Sets up a source and the spec for where it comes from.
+  - `data.autocrane.io/NAME: srcname` For AutoCrane: Sets up a pod-local data deployment called `NAME`. AutoCrane will set the `request.data.autocrane.io/NAME` field. Ensure the datarepo has this source defined in its sources.
 
 AutoCrane components set the following annotations for storing state:
   - `status.autocrane.io/NAME: <level>/timestamp/message` A watchdog status annotation
   - `request.data.autocrane.io/NAME: hash/ref/url` Stores AutoCrane's request for data deployment `NAME`. Read by DataDeployer.
-  - `status.data.autocrane.io/NAME: data` Stores DataDeployer status for data deployment `NAME`. Read by AutoCrane.
 
 AutoCrane components set the following pod labels for convenient querying:
   - `status.autocrane.io/health: error`: Updated when watchdogs are written to make it easier to find failing pods

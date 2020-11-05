@@ -9,5 +9,7 @@ namespace AutoCrane.Interfaces
     public interface IProcessRunner
     {
         Task<IProcessResult> RunAsync(string exe, string? workingDir, string[] args, CancellationToken cancellationToken);
+
+        Task<IProcessResult> RunAsync(string exe, string? workingDir, string[] args, CancellationToken cancellationToken, string[] secretsToMask);
     }
 }

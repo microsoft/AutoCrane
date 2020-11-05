@@ -49,7 +49,12 @@ namespace AutoCrane
             services.AddSingleton<IFileHasher, FileHasher>();
             services.AddSingleton<IPodDataRequestGetter, PodDataRequestGetter>();
             services.AddSingleton<IDataDeploymentRequestProcessor, DataDeploymentRequestProcessor>();
+            services.AddSingleton<ICredentialHelper, CredentialHelper>();
+            services.AddSingleton<ICredentialProvider, CredentialProviderForEnvironmentVariables>();
+            services.AddSingleton<ICredentialProvider, CredentialProviderForAzureManagedIdentity>();
+            services.AddSingleton<ICredentialProvider, CredentialProviderForAzureKeyVault>();
 
+            services.AddSingleton<CredentialProviderForAzureManagedIdentity>();
             services.AddSingleton<KubernetesClient>();
             services.AddSingleton<WatchdogProber>();
             services.AddSingleton<GetWatchdogService>();

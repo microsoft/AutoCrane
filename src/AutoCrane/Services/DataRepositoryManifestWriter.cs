@@ -37,7 +37,7 @@ namespace AutoCrane.Services
             var tmpFile = this.ManifestFilePath + ".tmp";
             using var fs = File.Create(tmpFile);
             await JsonSerializer.SerializeAsync(fs, manifest);
-            File.Move(tmpFile, this.ManifestFilePath);
+            File.Move(tmpFile, this.ManifestFilePath, overwrite: true);
         }
     }
 }

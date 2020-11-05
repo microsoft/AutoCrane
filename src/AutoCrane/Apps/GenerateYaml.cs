@@ -142,7 +142,7 @@ spec:
                 fieldPath: metadata.namespace
         resources:
           requests:
-            cpu: 100m
+            cpu: !!CPU!!
             memory: 50M
       serviceAccountName: autocrane
       nodeSelector:
@@ -212,7 +212,7 @@ spec:
                 fieldPath: metadata.namespace
         resources:
           requests:
-            cpu: 100m
+            cpu: !!CPU!!
             memory: 50M
       serviceAccountName: watchdogprober
       nodeSelector:
@@ -268,7 +268,7 @@ spec:
         probe.autocrane.io/datadeploy: POD_IP:8082/watchdog
         store.autocrane.io/location: /data
         data.autocrane.io/data1: autocranegit
-        data.autocrane.io/data2: autocranegit
+        data.autocrane.io/data2: data2
       labels:
         app.kubernetes.io/name: testworkload
         app.kubernetes.io/part-of: autocrane
@@ -309,7 +309,7 @@ spec:
             value: testworkload
         resources:
           requests:
-            cpu: 100m
+            cpu: !!CPU!!
             memory: 50M
         livenessProbe:
           httpGet:
@@ -381,7 +381,7 @@ spec:
                 fieldPath: metadata.namespace
         resources:
           requests:
-            cpu: 100m
+            cpu: !!CPU!!
             memory: 50M
         readinessProbe:
           httpGet:
@@ -436,7 +436,7 @@ spec:
             value: testworkload
         resources:
           requests:
-            cpu: 100m
+            cpu: !!CPU!!
             memory: 50M
         livenessProbe:
           httpGet:
@@ -487,7 +487,7 @@ spec:
           timeoutSeconds: 10
         resources:
           requests:
-            cpu: 100m
+            cpu: !!CPU!!
             memory: 50M
       serviceAccountName: testworkload
       nodeSelector:
@@ -562,10 +562,10 @@ spec:
           - name: DataRepo__SourcePath
             value: /data/source
           - name: DataRepo__Sources
-            value: ""autocranegit:git@https://github.com/microsoft/AutoCrane.git""
+            value: ""!!DATAREPO_SOURCES!!""
         resources:
           requests:
-            cpu: 100m
+            cpu: !!CPU!!
             memory: 50M
         livenessProbe:
           httpGet:
@@ -597,6 +597,7 @@ spec:
                 ["namespace"] = "autocrane",
                 ["image"] = "autocrane",
                 ["pull"] = "Never", // for local development
+                ["cpu"] = "10m",
                 ["autocrane_replicas"] = "1",
                 ["watchdogprober_replicas"] = "1",
                 ["testworkload_replicas"] = "2",
@@ -604,6 +605,7 @@ spec:
                 ["use_watchdogprober"] = "1",
                 ["use_testworkload"] = "0",
                 ["use_datarepo"] = "1",
+                ["datarepo_sources"] = "autocranegit:git@https://github.com/microsoft/AutoCrane.git;data2:git@https://github.com/microsoft/AutoCrane.git",
             };
 
             foreach (var arg in args)

@@ -1,9 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-using System;
 using System.IO;
-using System.Threading.Tasks;
 using AutoCrane.Interfaces;
 using AutoCrane.Models;
 using AutoCrane.Services;
@@ -42,7 +40,7 @@ namespace AutoCrane.Apps
                     if (!lastDataRepoCrawl.HasValue || lastDataRepoCrawl.Value > DataRepositoryCrawler.HeartbeatTimeout)
                     {
                         ctx.Response.StatusCode = 500;
-                        logger.LogError($"crawler not running, last heartbeat: {lastDataRepoCrawl.GetValueOrDefault().TotalSeconds} sec ago.");
+                        logger.LogError($"crawler not running, last heartbeat: {lastDataRepoCrawl}");
                         return ctx.Response.WriteAsync("crawler not running");
                     }
 

@@ -55,7 +55,7 @@ namespace AutoCrane.Services
 
             // turn "data1:git@https://github.com/microsoft/AutoCrane.git data2:git@https://github.com/dotnet/installer.git"
             // into ["data1"] = git@https://github.com/microsoft/AutoCrane.git
-            var sources = this.options.Value.Sources?.Split(' ').Select(s => s.Split(':', 2)).Where(ss => ss.Length == 2).Select(ss =>
+            var sources = this.options.Value.Sources?.Split(';').Select(s => s.Split(':', 2)).Where(ss => ss.Length == 2).Select(ss =>
             {
                 return new KeyValuePair<string, string>(ss[0], ss[1]);
             }).ToDictionary(x => x.Key, x => x.Value);
@@ -83,7 +83,9 @@ namespace AutoCrane.Services
                     {
                         var fullArchivePath = Path.Combine(archivePath, repo.Key);
                         Directory.CreateDirectory(fullArchivePath);
-                        var newSources = await this.repoSyncer.SyncRepoAsync(sourcePath, fullArchivePath, repo.Value, stoppingToken);
+                        var fullSourcePath = Path.Combine(sourcePath, repo.Key);
+                        Directory.CreateDirectory(fullSourcePath);
+                        var newSources = await this.repoSyncer.SyncRepoAsync(fullSourcePath, fullArchivePath, repo.Value, stoppingToken);
                         sourceList[repo.Key] = newSources;
                     }
                     catch (Exception e)
