@@ -17,5 +17,11 @@ namespace AutoCrane.Models
         /// A hash of the contents of the archive.
         /// </summary>
         public string? Hash { get; set; }
+
+        /// <summary>
+        /// Number of seconds since the unix epoch.
+        /// </summary>
+        public long? UnixTimestampSeconds { get; set; }
+
     }
 }

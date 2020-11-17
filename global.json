@@ -4,7 +4,7 @@
       "Microsoft.Build.NoTargets": "2.0.1"
     },
     "sdk": {
-      "version": "5.0.100-rc.2.20479.15",
+      "version": "5.0.100",
       "rollForward": "latestMinor"
     }
   }

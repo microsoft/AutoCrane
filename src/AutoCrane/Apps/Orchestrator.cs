@@ -119,6 +119,8 @@ namespace AutoCrane.Apps
                     {
                         if (manifest.Sources.TryGetValue(dataRepoSpec, out var sources))
                         {
+                            this.logger.LogInformation($"Pod {podRequest.Id} requesting initial data {dataRepoSpec}");
+
                             var sourceToPick = sources.OrderByDescending(k => k.Timestamp).FirstOrDefault();
                             if (sourceToPick is null)
                             {
@@ -132,6 +134,7 @@ namespace AutoCrane.Apps
                                     Path = sourceToPick.ArchiveFilePath,
                                 };
 
+                                this.logger.LogInformation($"Pod {podRequest.Id} requesting data {dataRepoSpec}, giving {downloadRequest.Path}");
                                 annotationsToAdd.Add(new KeyValuePair<string, string>(
                                     $"{CommonAnnotations.DataRequestPrefix}{request}",
                                     Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(downloadRequest))));
