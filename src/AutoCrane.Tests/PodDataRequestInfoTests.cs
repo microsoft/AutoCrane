@@ -8,11 +8,11 @@ namespace AutoCrane.Tests
     [TestClass]
     public class PodDataRequestInfoTests
     {
-        [DataRow("request.data.autocrane.io/test1: x", "test1")]
-        [DataRow("request.data.autocrane.io/test1: x;status.data.autocrane.io/test1: y", "test1")]
-        [DataRow("request.data.autocrane.io/test1: x;status.data.autocrane.io/test1: x", "")]
+        [DataRow("data.autocrane.io/test1: x", "test1")]
+        [DataRow("data.autocrane.io/test1: x;data.autocrane.io/test2: x", "test1;test2")]
+        [DataRow("request.data.autocrane.io/test1: x", "")]
         [DataTestMethod]
-        public void TestInProgressRequests(string items, string active)
+        public void TestNeedsRequests(string items, string active)
         {
             var dict = items.Split(';').Select(i =>
             {
@@ -25,7 +25,7 @@ namespace AutoCrane.Tests
             var podRequestInfo = new PodDataRequestInfo(new PodIdentifier("a", "b"), dict);
             foreach (var reqName in activeRequests.Where(r => !string.IsNullOrEmpty(r)))
             {
-                Assert.IsTrue(podRequestInfo.InProgressRequests.Any(r => r == reqName));
+                Assert.IsTrue(podRequestInfo.NeedsRequest.Any(r => r == reqName));
             }
         }
     }

@@ -22,6 +22,5 @@ namespace AutoCrane.Models
         /// Number of seconds since the unix epoch.
         /// </summary>
         public long? UnixTimestampSeconds { get; set; }
-
     }
 }
