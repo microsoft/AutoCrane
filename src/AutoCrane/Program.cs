@@ -5,6 +5,7 @@ using System;
 using System.Linq;
 using AutoCrane.Apps;
 using Microsoft.Extensions.DependencyInjection;
+using Prometheus.DotNetRuntime;
 
 namespace AutoCrane
 {
@@ -39,6 +40,7 @@ namespace AutoCrane
 
             var mode = args[0].ToLowerInvariant();
             var newargs = args.Skip(1).ToArray();
+            using var collector = DotNetRuntimeStatsBuilder.Default().StartCollecting();
             try
             {
                 switch (mode)

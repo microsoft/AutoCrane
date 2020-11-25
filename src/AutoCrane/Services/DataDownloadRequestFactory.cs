@@ -36,13 +36,17 @@ namespace AutoCrane.Services
         {
             this.logger.LogInformation($"Getting pod info {pod}");
             var podInfo = await this.podGetter.GetPodAsync(pod);
+            var list = new List<DataDownloadRequest>();
 
             this.logger.LogInformation($"Getting {CommonAnnotations.DataStoreLocation}");
-            var dropFolder = podInfo.Annotations.First(pi => pi.Key == CommonAnnotations.DataStoreLocation).Value;
+            var dropFolder = podInfo.Annotations.FirstOrDefault(pi => pi.Key == CommonAnnotations.DataStoreLocation).Value;
+            if (string.IsNullOrEmpty(dropFolder))
+            {
+                this.logger.LogError($"{CommonAnnotations.DataStoreLocation} is not set");
+                return list;
+            }
 
             var dataToGet = podInfo.Annotations.Where(pi => pi.Key.StartsWith(CommonAnnotations.DataRequestPrefix)).ToList();
-
-            var list = new List<DataDownloadRequest>();
 
             foreach (var dataDeployment in dataToGet)
             {
