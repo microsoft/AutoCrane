@@ -29,7 +29,7 @@ namespace AutoCrane.Services
 
         public async Task DownloadAsync(DataDownloadRequest request, CancellationToken token)
         {
-            if (request.Details.Hash is null || request.Details.Path is null)
+            if (request.Details is null || request.Details.Hash is null || request.Details.Path is null)
             {
                 throw new ArgumentNullException(nameof(request));
             }

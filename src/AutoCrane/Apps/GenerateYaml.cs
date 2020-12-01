@@ -540,6 +540,7 @@ spec:
       labels:
         app.kubernetes.io/name: datarepo
         app.kubernetes.io/part-of: autocrane
+        aadpodidbinding: !!AADPODIDBINDING!!
     spec:
       volumes:
           - name: data-store
@@ -605,6 +606,7 @@ spec:
                 ["use_watchdogprober"] = "1",
                 ["use_testworkload"] = "0",
                 ["use_datarepo"] = "1",
+                ["aadpodidbinding"] = string.Empty,
                 ["datarepo_sources"] = "autocranegit:git@https://github.com/microsoft/AutoCrane.git;data2:git@https://github.com/microsoft/AutoCrane.git",
             };
 

@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using AutoCrane.Interfaces;
@@ -18,13 +17,13 @@ namespace AutoCrane.Services
     {
         private readonly ILogger<DataDownloadRequestFactory> logger;
         private readonly IOptions<PodIdentifierOptions> thisPodOptions;
-        private readonly IPodGetter podGetter;
+        private readonly IPodDataRequestGetter podDataRequestGetter;
 
-        public DataDownloadRequestFactory(ILoggerFactory loggerFactory, IOptions<PodIdentifierOptions> thisPodOptions, IPodGetter podGetter)
+        public DataDownloadRequestFactory(ILoggerFactory loggerFactory, IOptions<PodIdentifierOptions> thisPodOptions, IPodDataRequestGetter podDataRequestGetter)
         {
             this.logger = loggerFactory.CreateLogger<DataDownloadRequestFactory>();
             this.thisPodOptions = thisPodOptions;
-            this.podGetter = podGetter;
+            this.podDataRequestGetter = podDataRequestGetter;
         }
 
         public Task<IList<DataDownloadRequest>> GetPodRequestsAsync()
@@ -35,33 +34,38 @@ namespace AutoCrane.Services
         public async Task<IList<DataDownloadRequest>> GetPodRequestsAsync(PodIdentifier pod)
         {
             this.logger.LogInformation($"Getting pod info {pod}");
-            var podInfo = await this.podGetter.GetPodAsync(pod);
+            var podInfo = await this.podDataRequestGetter.GetAsync(pod);
             var list = new List<DataDownloadRequest>();
 
-            this.logger.LogInformation($"Getting {CommonAnnotations.DataStoreLocation}");
-            var dropFolder = podInfo.Annotations.FirstOrDefault(pi => pi.Key == CommonAnnotations.DataStoreLocation).Value;
-            if (string.IsNullOrEmpty(dropFolder))
+            if (string.IsNullOrEmpty(podInfo.DropFolder))
             {
-                this.logger.LogError($"{CommonAnnotations.DataStoreLocation} is not set");
+                this.logger.LogError($"{CommonAnnotations.DataStoreLocation} is not set, returning empty list of pod data requests");
                 return list;
             }
 
-            var dataToGet = podInfo.Annotations.Where(pi => pi.Key.StartsWith(CommonAnnotations.DataRequestPrefix)).ToList();
-
-            foreach (var dataDeployment in dataToGet)
+            foreach (var repo in podInfo.DataRepos)
             {
-                var localDeploymentName = dataDeployment.Key.Replace(CommonAnnotations.DataRequestPrefix, string.Empty);
-                var dataDeploymentAnnotation = $"{CommonAnnotations.DataDeploymentPrefix}{localDeploymentName}";
-                var repoName = podInfo.Annotations.Where(pa => pa.Key == dataDeploymentAnnotation).FirstOrDefault().Value;
-                var utf8json = Convert.FromBase64String(dataDeployment.Value);
-                var details = JsonSerializer.Deserialize<DataDownloadRequestDetails>(utf8json);
-                if (details is null || details.Hash is null || details.Path is null || repoName is null)
+                if (repo.Key is null || repo.Value is null)
                 {
                     continue;
                 }
 
-                var extractionLocation = Path.Combine(dropFolder, details.Path.Replace(Path.PathSeparator, '_'));
-                list.Add(new DataDownloadRequest(pod, localDeploymentName, repoName, dropFolder, extractionLocation, details));
+                if (podInfo.Requests.TryGetValue(repo.Key, out var request))
+                {
+                    var utf8json = Convert.FromBase64String(request);
+                    var details = JsonSerializer.Deserialize<DataDownloadRequestDetails>(utf8json);
+                    if (details is null || details.Hash is null || details.Path is null)
+                    {
+                        continue;
+                    }
+
+                    var extractionLocation = Path.Combine(podInfo.DropFolder, details.Path.Replace(Path.PathSeparator, '_'));
+                    list.Add(new DataDownloadRequest(pod, repo.Key, repo.Value, podInfo.DropFolder, extractionLocation, details));
+                }
+                else
+                {
+                    list.Add(new DataDownloadRequest(pod, repo.Key, repo.Value, podInfo.DropFolder, string.Empty, null));
+                }
             }
 
             return list;

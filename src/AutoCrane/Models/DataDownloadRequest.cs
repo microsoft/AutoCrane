@@ -8,7 +8,7 @@ namespace AutoCrane.Models
 {
     public sealed class DataDownloadRequest
     {
-        public DataDownloadRequest(PodIdentifier pod, string localName, string repoName, string dropFolder, string extractionLocation, DataDownloadRequestDetails details)
+        public DataDownloadRequest(PodIdentifier pod, string localName, string repoName, string dropFolder, string extractionLocation, DataDownloadRequestDetails? details)
         {
             this.Pod = pod;
             this.LocalName = localName;
@@ -40,6 +40,6 @@ namespace AutoCrane.Models
         /// </summary>
         public string ExtractionLocation { get; }
 
-        public DataDownloadRequestDetails Details { get; }
+        public DataDownloadRequestDetails? Details { get; }
     }
 }
