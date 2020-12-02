@@ -75,11 +75,13 @@ namespace AutoCrane.Services
             process.Start();
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
-
-            this.logger.LogInformation($"Running: {exe} {string.Join(' ', args.Select(a => $"\"{MaskSecrets(a, secretsToMask)}\""))}");
+            var runningString = $"Running (CWD {workingDir ?? "null"}): {exe} {string.Join(' ', args.Select(a => $"\"{MaskSecrets(a, secretsToMask)}\""))}";
+            this.logger.LogInformation(runningString);
             await process.WaitForExitAsync(cancellationToken);
 
             result.ExitCode = process.ExitCode;
+            this.logger.LogInformation($"Exit code {result.ExitCode} from {runningString}");
+
             return result;
         }
 
