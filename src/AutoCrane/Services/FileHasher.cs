@@ -11,7 +11,7 @@ namespace AutoCrane.Services
 {
     public sealed class FileHasher : IFileHasher
     {
-        public async Task<string> GetAsync(string filename, bool cacheOnDisk = false)
+        public async Task<string> CalculateAsync(string filename, bool cacheOnDisk = false)
         {
             if (cacheOnDisk == false)
             {
