@@ -540,6 +540,7 @@ spec:
       labels:
         app.kubernetes.io/name: datarepo
         app.kubernetes.io/part-of: autocrane
+        aadpodidbinding: !!AADPODIDBINDING!!
     spec:
       volumes:
           - name: data-store
@@ -566,18 +567,20 @@ spec:
         resources:
           requests:
             cpu: !!CPU!!
-            memory: 50M
+            memory: !!DATAREPO_MEMORY!!
         livenessProbe:
           httpGet:
             path: /ping
             port: http
+          initialDelaySeconds: 300
           periodSeconds: 60
           timeoutSeconds: 10
         startupProbe:
           httpGet:
             path: /ping
             port: http
-          failureThreshold: 10
+          failureThreshold: 100
+          timeoutSeconds: 10
         readinessProbe:
           httpGet:
             path: /ping
@@ -605,6 +608,8 @@ spec:
                 ["use_watchdogprober"] = "1",
                 ["use_testworkload"] = "0",
                 ["use_datarepo"] = "1",
+                ["aadpodidbinding"] = string.Empty,
+                ["datarepo_memory"] = "200M",
                 ["datarepo_sources"] = "autocranegit:git@https://github.com/microsoft/AutoCrane.git;data2:git@https://github.com/microsoft/AutoCrane.git",
             };
 

@@ -73,7 +73,7 @@ namespace AutoCrane.Services
 
             if (Directory.Exists(Path.Combine(scratchDir, ".git")))
             {
-                await this.GitSyncAsync(url, scratchDir, token);
+                await this.GitSyncAsync(url, scratchDir, creds, token);
             }
             else
             {
@@ -113,8 +113,19 @@ namespace AutoCrane.Services
             {
                 var result = await this.runner.RunAsync(GitExe, scratchDir, new string[] { "archive", "--format=tar", hash, "-o", tmpFile }, token);
                 result.ThrowIfFailed();
-                result = await this.runner.RunAsync(ZstdExe, scratchDir, new string[] { "-19", tmpFile, "-o", archivePath }, token);
+                token.ThrowIfCancellationRequested();
+
+                result = await this.runner.RunAsync(ZstdExe, scratchDir, new string[] { tmpFile, "-o", archivePath }, token);
                 result.ThrowIfFailed();
+            }
+            catch (Exception)
+            {
+                if (File.Exists(archivePath))
+                {
+                    File.Delete(archivePath);
+                }
+
+                throw;
             }
             finally
             {
@@ -158,15 +169,9 @@ namespace AutoCrane.Services
             }
 
             result.ThrowIfFailed();
-
-            if (creds != null)
-            {
-                result = await this.runner.RunAsync(GitExe, dir, new string[] { "config", "--local", "http.extraheader", $"authorization: basic {creds}" }, token, new string[] { creds });
-                result.ThrowIfFailed();
-            }
         }
 
-        private async Task GitSyncAsync(string url, string dir, CancellationToken token)
+        private async Task GitSyncAsync(string url, string dir, string? creds, CancellationToken token)
         {
             // look at setting remote to url before git pull?
             if (url is null)
@@ -174,8 +179,34 @@ namespace AutoCrane.Services
                 throw new ArgumentNullException(nameof(url));
             }
 
-            var result = await this.runner.RunAsync(GitExe, dir, new string[] { "pull", "origin", "--depth", GitCloneDepthString }, token);
-            result.ThrowIfFailed();
+            try
+            {
+                if (creds == null)
+                {
+                    var result = await this.runner.RunAsync(GitExe, dir, new string[] { "fetch", "--depth", GitCloneDepthString, "origin" }, token);
+                    result.ThrowIfFailed();
+
+                    result = await this.runner.RunAsync(GitExe, dir, new string[] { "checkout", "FETCH_HEAD" }, token);
+                    result.ThrowIfFailed();
+                }
+                else
+                {
+                    var result = await this.runner.RunAsync(GitExe, dir, new string[] { "-c", $"http.extraheader=authorization: basic {creds}", "fetch", "--depth", GitCloneDepthString, "origin" }, token, new string[] { creds });
+                    result.ThrowIfFailed();
+
+                    result = await this.runner.RunAsync(GitExe, dir, new string[] { "-c", $"http.extraheader=authorization: basic {creds}", "checkout", "FETCH_HEAD" }, token, new string[] { creds });
+                    result.ThrowIfFailed();
+                }
+            }
+            finally
+            {
+                var lockFile = Path.Combine(dir, ".git", "shallow.lock");
+                if (File.Exists(lockFile))
+                {
+                    this.logger.LogInformation($"Deleting lock file: {lockFile}");
+                    File.Delete(lockFile);
+                }
+            }
         }
 
         private class GitLogEntry

@@ -1,18 +1,23 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoCrane.Interfaces;
+using AutoCrane.Models;
 using Microsoft.Extensions.Logging;
 
 namespace AutoCrane.Services
 {
     internal sealed class DataDeploymentRequestProcessor : IDataDeploymentRequestProcessor
     {
+        private const int GetRequestLoopSeconds = 15;
+        private const int MaxRequestLoopCount = 3;
         private readonly ILogger<DataDeploymentRequestProcessor> logger;
         private readonly IDataDownloader dataDownloader;
         private readonly IDataDownloadRequestFactory downloadRequestFactory;
@@ -28,11 +33,23 @@ namespace AutoCrane.Services
 
         public async Task HandleRequestsAsync(CancellationToken token)
         {
-            var requests = await this.downloadRequestFactory.GetPodRequestsAsync();
-            if (!requests.Any())
+            IList<DataDownloadRequest>? requests = null;
+            var loopCount = 0;
+            while (requests is null || requests.Any(r => r.Details is null))
             {
-                this.logger.LogInformation($"Waiting for requests...");
-                return;
+                this.logger.LogInformation($"Getting data requests...");
+                requests = await this.downloadRequestFactory.GetPodRequestsAsync();
+
+                this.logger.LogInformation($"Got {requests.Count} data requests... {requests.Where(r => r.Details is null).Count()} where details == null.");
+                await Task.Delay(TimeSpan.FromSeconds(GetRequestLoopSeconds), token);
+                token.ThrowIfCancellationRequested();
+                loopCount++;
+
+                // if AutoCrane hasn't given us any request info after this long, throw an exception
+                if (loopCount > MaxRequestLoopCount)
+                {
+                    throw new TimeoutException($"Timeout waiting for DownloadDataRequests with details. Is the AutoCrane orchestrator running and serving data requests?");
+                }
             }
 
             this.logger.LogInformation($"Got {requests.Count} requets...");

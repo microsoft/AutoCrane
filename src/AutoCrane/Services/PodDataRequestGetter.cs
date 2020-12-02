@@ -23,5 +23,11 @@ namespace AutoCrane.Services
             var pods = await this.client.GetPodAnnotationAsync(ns);
             return pods.Select(p => new PodDataRequestInfo(p.Id, p.Annotations)).ToList();
         }
+
+        public async Task<PodDataRequestInfo> GetAsync(PodIdentifier pi)
+        {
+            var pod = await this.client.GetPodAnnotationAsync(pi);
+            return new PodDataRequestInfo(pi, pod.Annotations);
+        }
     }
 }
