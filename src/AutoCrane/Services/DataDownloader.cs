@@ -83,6 +83,7 @@ namespace AutoCrane.Services
             var hash = await this.fileHasher.GetAsync(dropLocation);
             if (hashToMatch != hash)
             {
+                this.logger.LogError($"Hash mismatch on {dropLocation}, deleting file.");
                 File.Delete(hash);
                 throw new Exception($"Hash mismatch on {dropLocation}, expected {hashToMatch}, actual {hash}");
             }
