@@ -567,7 +567,7 @@ spec:
         resources:
           requests:
             cpu: !!CPU!!
-            memory: 50M
+            memory: !!DATAREPO_MEMORY!!
         livenessProbe:
           httpGet:
             path: /ping
@@ -609,6 +609,7 @@ spec:
                 ["use_testworkload"] = "0",
                 ["use_datarepo"] = "1",
                 ["aadpodidbinding"] = string.Empty,
+                ["datarepo_memory"] = "200M",
                 ["datarepo_sources"] = "autocranegit:git@https://github.com/microsoft/AutoCrane.git;data2:git@https://github.com/microsoft/AutoCrane.git",
             };
 
