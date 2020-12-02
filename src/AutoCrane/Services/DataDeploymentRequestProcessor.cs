@@ -16,8 +16,8 @@ namespace AutoCrane.Services
 {
     internal sealed class DataDeploymentRequestProcessor : IDataDeploymentRequestProcessor
     {
-        private const int GetRequestLoopSeconds = 10;
-        private const int MaxRequestLoopCount = 10;
+        private const int GetRequestLoopSeconds = 15;
+        private const int MaxRequestLoopCount = 3;
         private readonly ILogger<DataDeploymentRequestProcessor> logger;
         private readonly IDataDownloader dataDownloader;
         private readonly IDataDownloadRequestFactory downloadRequestFactory;

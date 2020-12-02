@@ -174,7 +174,10 @@ namespace AutoCrane.Services
                 throw new ArgumentNullException(nameof(url));
             }
 
-            var result = await this.runner.RunAsync(GitExe, dir, new string[] { "pull", "origin", "--depth", GitCloneDepthString }, token);
+            var result = await this.runner.RunAsync(GitExe, dir, new string[] { "fetch", "--depth", GitCloneDepthString, "origin" }, token);
+            result.ThrowIfFailed();
+
+            result = await this.runner.RunAsync(GitExe, dir, new string[] { "checkout", "FETCH_HEAD" }, token);
             result.ThrowIfFailed();
         }
 

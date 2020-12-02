@@ -11,7 +11,7 @@ namespace AutoCrane.Apps
 {
     public sealed class DataDeployInit
     {
-        private const int ConsecutiveErrorCountBeforeExiting = 5;
+        private const int ConsecutiveErrorCountBeforeExiting = 3;
         private const int IterationLoopSeconds = 15;
         private readonly ILogger<DataDeployInit> logger;
         private readonly IDataDeploymentRequestProcessor dataDeploymentRequestProcessor;
