@@ -578,7 +578,8 @@ spec:
           httpGet:
             path: /ping
             port: http
-          failureThreshold: 10
+          failureThreshold: 100
+          timeoutSeconds: 10
         readinessProbe:
           httpGet:
             path: /ping
