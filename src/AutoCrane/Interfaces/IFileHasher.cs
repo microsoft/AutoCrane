@@ -7,6 +7,6 @@ namespace AutoCrane.Interfaces
 {
     public interface IFileHasher
     {
-        Task<string> GetAsync(string filename, bool cacheOnDisk = false);
+        Task<string> CalculateAsync(string filename, bool cacheOnDisk = false);
     }
 }

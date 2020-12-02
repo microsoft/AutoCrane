@@ -98,7 +98,7 @@ namespace AutoCrane.Services
 
                 list.Add(new DataRepositorySource(
                     archivePath.Replace(archiveDropDir + Path.DirectorySeparatorChar, string.Empty),
-                    await this.fileHasher.GetAsync(archivePath, cacheOnDisk: true),
+                    await this.fileHasher.CalculateAsync(archivePath, cacheOnDisk: true),
                     DateTimeOffset.FromUnixTimeSeconds(entry.UnixTime)));
             }
 

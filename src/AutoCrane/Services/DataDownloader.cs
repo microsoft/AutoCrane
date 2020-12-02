@@ -46,7 +46,7 @@ namespace AutoCrane.Services
                 {
                     var dropUrl = $"http://datarepo/{request.RepoName}/{request.Details.Path}";
                     this.logger.LogInformation($"Downloading {dropUrl} to {dropArchive}");
-                    var data = await this.client.GetAsync(dropUrl, token);
+                    var data = await this.client.GetAsync(dropUrl, HttpCompletionOption.ResponseHeadersRead, token);
                     data.EnsureSuccessStatusCode();
                     using var fs = File.Create(dropArchive);
                     await data.Content.CopyToAsync(fs, token);
@@ -80,7 +80,7 @@ namespace AutoCrane.Services
 
         private async Task VerifyHashAsync(string dropLocation, string hashToMatch)
         {
-            var hash = await this.fileHasher.GetAsync(dropLocation);
+            var hash = await this.fileHasher.CalculateAsync(dropLocation);
             if (hashToMatch != hash)
             {
                 this.logger.LogError($"Hash mismatch on {dropLocation}, deleting file.");
