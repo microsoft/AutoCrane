@@ -36,6 +36,8 @@ namespace AutoCrane.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            this.heartbeat.Beat(nameof(DataRepositoryCrawler));
+
             var sourcePath = this.options.Value.SourcePath;
             var archivePath = this.options.Value.ArchivePath;
             if (sourcePath is null)
