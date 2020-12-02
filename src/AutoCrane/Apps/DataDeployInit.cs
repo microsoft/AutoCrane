@@ -24,22 +24,19 @@ namespace AutoCrane.Apps
 
         public async Task<int> RunAsync(int iterations = int.MaxValue)
         {
-            while (iterations-- > 0)
-            {
-                var errorCount = 0;
+            var errorCount = 0;
 
-                while (errorCount < ConsecutiveErrorCountBeforeExiting)
+            while (errorCount < ConsecutiveErrorCountBeforeExiting)
+            {
+                try
                 {
-                    try
-                    {
-                        await this.dataDeploymentRequestProcessor.HandleRequestsAsync(CancellationToken.None);
-                        return 0;
-                    }
-                    catch (Exception e)
-                    {
-                        this.logger.LogError($"Unhandled exception: {e}");
-                        errorCount++;
-                    }
+                    await this.dataDeploymentRequestProcessor.HandleRequestsAsync(CancellationToken.None);
+                    return 0;
+                }
+                catch (Exception e)
+                {
+                    this.logger.LogError($"Unhandled exception: {e}");
+                    errorCount++;
                 }
 
                 await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds));

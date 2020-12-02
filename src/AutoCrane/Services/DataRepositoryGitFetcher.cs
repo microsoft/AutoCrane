@@ -115,7 +115,7 @@ namespace AutoCrane.Services
                 result.ThrowIfFailed();
                 token.ThrowIfCancellationRequested();
 
-                result = await this.runner.RunAsync(ZstdExe, scratchDir, new string[] { "-19", tmpFile, "-o", archivePath }, token);
+                result = await this.runner.RunAsync(ZstdExe, scratchDir, new string[] { tmpFile, "-o", archivePath }, token);
                 result.ThrowIfFailed();
             }
             catch (Exception)
@@ -179,21 +179,33 @@ namespace AutoCrane.Services
                 throw new ArgumentNullException(nameof(url));
             }
 
-            if (creds == null)
+            try
             {
-                var result = await this.runner.RunAsync(GitExe, dir, new string[] { "fetch", "--depth", GitCloneDepthString, "origin" }, token);
-                result.ThrowIfFailed();
+                if (creds == null)
+                {
+                    var result = await this.runner.RunAsync(GitExe, dir, new string[] { "fetch", "--depth", GitCloneDepthString, "origin" }, token);
+                    result.ThrowIfFailed();
 
-                result = await this.runner.RunAsync(GitExe, dir, new string[] { "checkout", "FETCH_HEAD" }, token);
-                result.ThrowIfFailed();
+                    result = await this.runner.RunAsync(GitExe, dir, new string[] { "checkout", "FETCH_HEAD" }, token);
+                    result.ThrowIfFailed();
+                }
+                else
+                {
+                    var result = await this.runner.RunAsync(GitExe, dir, new string[] { "-c", $"http.extraheader=authorization: basic {creds}", "fetch", "--depth", GitCloneDepthString, "origin" }, token, new string[] { creds });
+                    result.ThrowIfFailed();
+
+                    result = await this.runner.RunAsync(GitExe, dir, new string[] { "-c", $"http.extraheader=authorization: basic {creds}", "checkout", "FETCH_HEAD" }, token, new string[] { creds });
+                    result.ThrowIfFailed();
+                }
             }
-            else
+            finally
             {
-                var result = await this.runner.RunAsync(GitExe, dir, new string[] { "-c", $"http.extraheader=authorization: basic {creds}", "fetch", "--depth", GitCloneDepthString, "origin" }, token, new string[] { creds });
-                result.ThrowIfFailed();
-
-                result = await this.runner.RunAsync(GitExe, dir, new string[] { "-c", $"http.extraheader=authorization: basic {creds}", "checkout", "FETCH_HEAD" }, token, new string[] { creds });
-                result.ThrowIfFailed();
+                var lockFile = Path.Combine(dir, ".git", "shallow.lock");
+                if (File.Exists(lockFile))
+                {
+                    this.logger.LogInformation($"Deleting lock file: {lockFile}");
+                    File.Delete(lockFile);
+                }
             }
         }
 
