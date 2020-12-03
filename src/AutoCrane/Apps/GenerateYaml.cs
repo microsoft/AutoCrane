@@ -96,6 +96,14 @@ roleRef:
   name: autocrane-pod-eviction
   apiGroup: rbac.authorization.k8s.io
 ---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: autocrane-priority
+value: !!AUTOCRANE_PRIORITY!!
+globalDefault: false
+description: ""This priority ensures autocrane is scheduled before other workloads""
+---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
@@ -145,6 +153,7 @@ spec:
             cpu: !!CPU!!
             memory: 50M
       serviceAccountName: autocrane
+      priorityClassName: autocrane-priority
       nodeSelector:
         beta.kubernetes.io/os: linux
 ";
@@ -215,6 +224,7 @@ spec:
             cpu: !!CPU!!
             memory: 50M
       serviceAccountName: watchdogprober
+      priorityClassName: autocrane-priority
       nodeSelector:
         beta.kubernetes.io/os: linux
 
@@ -589,6 +599,7 @@ spec:
           periodSeconds: 15
           timeoutSeconds: 10
       serviceAccountName: datarepo
+      priorityClassName: autocrane-priority
       nodeSelector:
         beta.kubernetes.io/os: linux
 ";
@@ -610,6 +621,7 @@ spec:
                 ["use_datarepo"] = "1",
                 ["aadpodidbinding"] = string.Empty,
                 ["datarepo_memory"] = "200M",
+                ["autocrane_priority"] = "10000",
                 ["datarepo_sources"] = "autocranegit:git@https://github.com/microsoft/AutoCrane.git;data2:git@https://github.com/microsoft/AutoCrane.git",
             };
 
