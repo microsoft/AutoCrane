@@ -48,6 +48,12 @@ namespace AutoCrane.Services
                     this.logger.LogInformation($"Downloading {dropUrl} to {dropArchive}");
                     var data = await this.client.GetAsync(dropUrl, HttpCompletionOption.ResponseHeadersRead, token);
                     data.EnsureSuccessStatusCode();
+                    var parentDirectory = Path.GetDirectoryName(dropArchive);
+                    if (parentDirectory is not null)
+                    {
+                        Directory.CreateDirectory(parentDirectory);
+                    }
+
                     using var fs = File.Create(dropArchive);
                     await data.Content.CopyToAsync(fs, token);
                     fs.Close();

@@ -47,7 +47,9 @@ namespace AutoCrane.Services
                     this.heartbeat.Beat(nameof(DataDeploymentBackgroundSync));
                 }
 
-                await Task.Delay(HeartbeatTimeout / 4, stoppingToken);
+                var sleepTime = HeartbeatTimeout / 10;
+                this.logger.LogInformation($"Sleeping for {sleepTime}");
+                await Task.Delay(sleepTime, stoppingToken);
             }
 
             this.logger.LogInformation($"Exiting deployment sync");
