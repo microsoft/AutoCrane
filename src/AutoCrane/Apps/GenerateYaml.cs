@@ -227,7 +227,6 @@ spec:
       priorityClassName: autocrane-priority
       nodeSelector:
         beta.kubernetes.io/os: linux
-
 ";
 
         private const string TestWorkloadYaml = @"
@@ -552,6 +551,16 @@ spec:
         app.kubernetes.io/part-of: autocrane
         aadpodidbinding: !!AADPODIDBINDING!!
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - datarepo
+            topologyKey: ""kubernetes.io/hostname""
       volumes:
           - name: data-store
             emptyDir: {}
@@ -583,7 +592,7 @@ spec:
             path: /ping
             port: http
           initialDelaySeconds: 300
-          periodSeconds: 60
+          periodSeconds: 30
           timeoutSeconds: 10
         startupProbe:
           httpGet:
@@ -596,8 +605,8 @@ spec:
             path: /ping
             port: http
           initialDelaySeconds: 10
-          periodSeconds: 15
-          timeoutSeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
       serviceAccountName: datarepo
       priorityClassName: autocrane-priority
       nodeSelector:
@@ -615,7 +624,7 @@ spec:
                 ["autocrane_replicas"] = "1",
                 ["watchdogprober_replicas"] = "1",
                 ["testworkload_replicas"] = "2",
-                ["datarepo_replicas"] = "1",
+                ["datarepo_replicas"] = "2",
                 ["use_watchdogprober"] = "1",
                 ["use_testworkload"] = "0",
                 ["use_datarepo"] = "1",
