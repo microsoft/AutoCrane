@@ -64,6 +64,10 @@ namespace AutoCrane.Services
                     this.logger.LogInformation($"Found cached secret, Cache age {cacheAge} < timeout {SecretCacheTimeout}");
                     return cachedSecret;
                 }
+                else
+                {
+                    this.logger.LogInformation($"Found expired cached secret, Cache age {cacheAge} > timeout {SecretCacheTimeout}");
+                }
             }
 
             var kvResourceUrl = "https://vault.azure.net";

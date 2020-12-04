@@ -59,10 +59,14 @@ namespace AutoCrane.Services
             {
                 (var cachedSecret, var cacheExpiry) = cachedValue;
                 var now = this.clock.Get();
-                if (cacheExpiry < now)
+                if (now < cacheExpiry)
                 {
-                    this.logger.LogInformation($"Found cached token, Expires {cacheExpiry} < now {now}");
+                    this.logger.LogInformation($"Found cached token, expires after {cacheExpiry}");
                     return cachedSecret;
+                }
+                else
+                {
+                    this.logger.LogInformation($"Found cached token, but expired already ({cacheExpiry})");
                 }
             }
 
