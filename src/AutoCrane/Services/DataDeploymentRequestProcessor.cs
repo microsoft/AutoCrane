@@ -17,7 +17,7 @@ namespace AutoCrane.Services
     internal sealed class DataDeploymentRequestProcessor : IDataDeploymentRequestProcessor
     {
         private const int GetRequestLoopSeconds = 15;
-        private const int MaxRequestLoopCount = 3;
+        private const int MaxRequestLoopCount = 5;
         private readonly ILogger<DataDeploymentRequestProcessor> logger;
         private readonly IDataDownloader dataDownloader;
         private readonly IDataDownloadRequestFactory downloadRequestFactory;
@@ -43,7 +43,7 @@ namespace AutoCrane.Services
                 this.logger.LogInformation($"Getting data requests...");
                 requests = await this.downloadRequestFactory.GetPodRequestsAsync();
 
-                this.logger.LogInformation($"Got {requests.Count} data requests... {requests.Where(r => r.Details is null).Count()} where details == null.");
+                this.logger.LogInformation($"We have {requests.Count} data requests... {requests.Where(r => r.Details is null).Count()} where details are set.");
                 await Task.Delay(TimeSpan.FromSeconds(GetRequestLoopSeconds), token);
                 token.ThrowIfCancellationRequested();
                 loopCount++;
@@ -55,7 +55,7 @@ namespace AutoCrane.Services
                 }
             }
 
-            this.logger.LogInformation($"Got {requests.Count} requets...");
+            this.logger.LogInformation($"Handling {requests.Count} data deployment requets...");
             var sw = Stopwatch.StartNew();
 
             // try to cleanup first
@@ -73,22 +73,23 @@ namespace AutoCrane.Services
                         throw new ArgumentNullException(nameof(manifestFileList));
                     }
 
-                    var directoriesThatMayExist = manifestFileList.Select(src => src.ArchiveFilePath);
-                    var filesThatMayExist = manifestFileList.Select(src => this.dataDownloader.GetDropDownloadArchiveName(dropFolder, src.Hash));
+                    var shouldNotDeleteDirectories = manifestFileList.Select(src => Path.Combine(dropFolder, src.ArchiveFilePath)).ToHashSet();
+                    var shouldNotDeleteFiles = manifestFileList.Select(src => this.dataDownloader.GetDropDownloadArchiveName(dropFolder, src.Hash)).ToHashSet();
 
-                    this.logger.LogInformation($"directories that may exist {directoriesThatMayExist}");
-                    this.logger.LogInformation($"files that may exist {filesThatMayExist}");
+                    this.logger.LogInformation($"directories that may exist {string.Join(';', shouldNotDeleteDirectories)}");
+                    this.logger.LogInformation($"files that may exist {string.Join(';', shouldNotDeleteFiles)}");
 
-                    var filesToDelete = Directory.GetFiles(dropFolder).Where(file => filesThatMayExist.Contains(file) || directoriesThatMayExist.Contains(file));
+                    var filesToDelete = Directory.GetFiles(dropFolder).Where(file => !shouldNotDeleteFiles.Contains(file) && !shouldNotDeleteDirectories.Contains(file));
                     foreach (var file in filesToDelete)
                     {
-                        this.logger.LogInformation($"Proposing to delete file: {file}");
                         if (File.Exists(file))
                         {
+                            this.logger.LogInformation($"Deleting file: {file}");
                             File.Delete(file);
                         }
                         else if (Directory.Exists(file))
                         {
+                            this.logger.LogInformation($"Deleting directory: {file}");
                             Directory.Delete(file, recursive: true);
                         }
                     }
