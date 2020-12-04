@@ -67,8 +67,7 @@ namespace AutoCrane.Services
             }
 
             var kvResourceUrl = "https://vault.azure.net";
-            var kvAccessTokenJson = await this.managedIdentity.RequestManagedIdentityTokenAsync(kvResourceUrl);
-            var accessToken = ReadJsonValue(kvAccessTokenJson, "access_token");
+            var accessToken = await this.managedIdentity.RequestManagedIdentityTokenAsync(kvResourceUrl);
 
             var requestUrl = $"https://{kvName}.vault.azure.net/secrets/{kvSecret}?api-version=7.0";
             this.logger.LogInformation($"GET {requestUrl}");
