@@ -9,6 +9,8 @@ namespace AutoCrane.Interfaces
 {
     public interface IDataDownloader
     {
+        string GetDropDownloadArchiveName(string dropFolder, string hash);
+
         Task DownloadAsync(DataDownloadRequest request, CancellationToken token);
     }
 }
