@@ -591,7 +591,7 @@ spec:
           httpGet:
             path: /ping
             port: http
-          initialDelaySeconds: 300
+          initialDelaySeconds: 600
           periodSeconds: 30
           timeoutSeconds: 10
         startupProbe:

@@ -78,7 +78,7 @@ namespace AutoCrane.Services
             var expiresOnSeconds = long.Parse(expiresOnString);
             var expiry = DateTimeOffset.FromUnixTimeSeconds(expiresOnSeconds);
             this.CacheSecret(resource, accessToken, expiry - TimeSpan.FromMinutes(15));
-            return tokenJson;
+            return accessToken;
         }
 
         private static string ReadJsonValue(string jsonString, string property)
