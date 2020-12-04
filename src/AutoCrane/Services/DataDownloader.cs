@@ -27,6 +27,11 @@ namespace AutoCrane.Services
             this.fileHasher = fileHasher;
         }
 
+        public string GetDropDownloadArchiveName(string dropFolder, string hash)
+        {
+            return Path.Combine(dropFolder, hash);
+        }
+
         public async Task DownloadAsync(DataDownloadRequest request, CancellationToken token)
         {
             if (request.Details is null || request.Details.Hash is null || request.Details.Path is null)
@@ -34,7 +39,7 @@ namespace AutoCrane.Services
                 throw new ArgumentNullException(nameof(request));
             }
 
-            var dropArchive = Path.Combine(request.DataDropFolder, request.Details.Hash);
+            var dropArchive = this.GetDropDownloadArchiveName(request.DataDropFolder, request.Details.Hash);
             this.logger.LogInformation($"Checking if already downloaded to {dropArchive}");
             if (File.Exists(dropArchive))
             {
@@ -48,11 +53,17 @@ namespace AutoCrane.Services
                     this.logger.LogInformation($"Downloading {dropUrl} to {dropArchive}");
                     var data = await this.client.GetAsync(dropUrl, HttpCompletionOption.ResponseHeadersRead, token);
                     data.EnsureSuccessStatusCode();
+                    var parentDirectory = Path.GetDirectoryName(dropArchive);
+                    if (parentDirectory is not null)
+                    {
+                        Directory.CreateDirectory(parentDirectory);
+                    }
+
                     using var fs = File.Create(dropArchive);
                     await data.Content.CopyToAsync(fs, token);
                     fs.Close();
                     await this.VerifyHashAsync(dropArchive, request.Details.Hash);
-                    this.logger.LogInformation($"Extacting {dropArchive} to {request.ExtractionLocation}");
+                    this.logger.LogInformation($"Extracting {dropArchive} to {request.ExtractionLocation}");
                     Directory.CreateDirectory(request.ExtractionLocation);
                     await this.ExtractArchiveAsync(dropArchive, request.ExtractionLocation, token);
                 }

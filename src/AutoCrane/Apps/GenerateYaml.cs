@@ -96,6 +96,14 @@ roleRef:
   name: autocrane-pod-eviction
   apiGroup: rbac.authorization.k8s.io
 ---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: autocrane-priority
+value: !!AUTOCRANE_PRIORITY!!
+globalDefault: false
+description: ""This priority ensures autocrane is scheduled before other workloads""
+---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
@@ -145,6 +153,7 @@ spec:
             cpu: !!CPU!!
             memory: 50M
       serviceAccountName: autocrane
+      priorityClassName: autocrane-priority
       nodeSelector:
         beta.kubernetes.io/os: linux
 ";
@@ -215,9 +224,9 @@ spec:
             cpu: !!CPU!!
             memory: 50M
       serviceAccountName: watchdogprober
+      priorityClassName: autocrane-priority
       nodeSelector:
         beta.kubernetes.io/os: linux
-
 ";
 
         private const string TestWorkloadYaml = @"
@@ -542,6 +551,16 @@ spec:
         app.kubernetes.io/part-of: autocrane
         aadpodidbinding: !!AADPODIDBINDING!!
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - datarepo
+            topologyKey: ""kubernetes.io/hostname""
       volumes:
           - name: data-store
             emptyDir: {}
@@ -572,8 +591,8 @@ spec:
           httpGet:
             path: /ping
             port: http
-          initialDelaySeconds: 300
-          periodSeconds: 60
+          initialDelaySeconds: 600
+          periodSeconds: 30
           timeoutSeconds: 10
         startupProbe:
           httpGet:
@@ -586,9 +605,10 @@ spec:
             path: /ping
             port: http
           initialDelaySeconds: 10
-          periodSeconds: 15
-          timeoutSeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
       serviceAccountName: datarepo
+      priorityClassName: autocrane-priority
       nodeSelector:
         beta.kubernetes.io/os: linux
 ";
@@ -604,12 +624,13 @@ spec:
                 ["autocrane_replicas"] = "1",
                 ["watchdogprober_replicas"] = "1",
                 ["testworkload_replicas"] = "2",
-                ["datarepo_replicas"] = "1",
+                ["datarepo_replicas"] = "2",
                 ["use_watchdogprober"] = "1",
                 ["use_testworkload"] = "0",
                 ["use_datarepo"] = "1",
                 ["aadpodidbinding"] = string.Empty,
                 ["datarepo_memory"] = "200M",
+                ["autocrane_priority"] = "10000",
                 ["datarepo_sources"] = "autocranegit:git@https://github.com/microsoft/AutoCrane.git;data2:git@https://github.com/microsoft/AutoCrane.git",
             };
 

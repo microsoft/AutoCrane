@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -15,16 +16,21 @@ namespace AutoCrane.Services
     internal sealed class CredentialProviderForAzureKeyVault : ICredentialProvider
     {
         private const string Protocol = "azkv";
+        private static readonly TimeSpan SecretCacheTimeout = TimeSpan.FromMinutes(30);
         private readonly HttpClient client;
         private readonly ILogger<CredentialProviderForAzureKeyVault> logger;
         private readonly CredentialProviderForAzureManagedIdentity managedIdentity;
+        private readonly IClock clock;
+        private readonly ConcurrentDictionary<string, (string, DateTimeOffset)> secretCache;
 
-        public CredentialProviderForAzureKeyVault(ILoggerFactory loggerFactory, CredentialProviderForAzureManagedIdentity managedIdentity)
+        public CredentialProviderForAzureKeyVault(ILoggerFactory loggerFactory, CredentialProviderForAzureManagedIdentity managedIdentity, IClock clock)
         {
             this.client = new HttpClient();
             this.logger = loggerFactory.CreateLogger<CredentialProviderForAzureKeyVault>();
             this.managedIdentity = managedIdentity;
+            this.clock = clock;
             this.client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            this.secretCache = new ConcurrentDictionary<string, (string, DateTimeOffset)>();
         }
 
         public bool CanLookup(string credentialSpec)
@@ -48,9 +54,24 @@ namespace AutoCrane.Services
                 throw new NotImplementedException($"spec {spec} not {Protocol}");
             }
 
+            if (this.secretCache.TryGetValue(credentialSpec, out var cachedValue))
+            {
+                (var cachedSecret, var cachedTime) = cachedValue;
+                var now = this.clock.Get();
+                var cacheAge = now - cachedTime;
+                if (cacheAge < SecretCacheTimeout)
+                {
+                    this.logger.LogInformation($"Found cached secret, Cache age {cacheAge} < timeout {SecretCacheTimeout}");
+                    return cachedSecret;
+                }
+                else
+                {
+                    this.logger.LogInformation($"Found expired cached secret, Cache age {cacheAge} > timeout {SecretCacheTimeout}");
+                }
+            }
+
             var kvResourceUrl = "https://vault.azure.net";
-            var kvAccessTokenJson = await this.managedIdentity.RequestManagedIdentityTokenAsync(kvResourceUrl);
-            var accessToken = ReadJsonValue(kvAccessTokenJson, "access_token");
+            var accessToken = await this.managedIdentity.RequestManagedIdentityTokenAsync(kvResourceUrl);
 
             var requestUrl = $"https://{kvName}.vault.azure.net/secrets/{kvSecret}?api-version=7.0";
             this.logger.LogInformation($"GET {requestUrl}");
@@ -59,7 +80,9 @@ namespace AutoCrane.Services
             using var response = await this.client.SendAsync(request);
             response.EnsureSuccessStatusCode();
             var secretJson = await response.Content.ReadAsStringAsync();
-            return ReadJsonValue(secretJson, "value");
+            var value = ReadJsonValue(secretJson, "value");
+            this.CacheSecret(credentialSpec, value);
+            return value;
         }
 
         private static string ReadJsonValue(string jsonString, string property)
@@ -81,6 +104,12 @@ namespace AutoCrane.Services
             }
 
             return val;
+        }
+
+        private void CacheSecret(string credentialSpec, string value)
+        {
+            var newVal = (value, this.clock.Get());
+            this.secretCache.AddOrUpdate(credentialSpec, newVal, (_, _) => newVal);
         }
     }
 }
