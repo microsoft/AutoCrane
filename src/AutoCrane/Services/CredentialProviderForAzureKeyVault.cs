@@ -21,14 +21,16 @@ namespace AutoCrane.Services
         private readonly HttpClient client;
         private readonly ILogger<CredentialProviderForAzureKeyVault> logger;
         private readonly IClock clock;
-        private readonly ICredentialHelper credentialHelper;
+        private readonly CredentialProviderForAzureManagedIdentity managedIdentity;
+        private readonly ISecretCache secretCache;
 
-        public CredentialProviderForAzureKeyVault(ILoggerFactory loggerFactory, IClock clock, ICredentialHelper credentialHelper)
+        public CredentialProviderForAzureKeyVault(ILoggerFactory loggerFactory, IClock clock, CredentialProviderForAzureManagedIdentity managedIdentity, ISecretCache secretCache)
         {
             this.client = new HttpClient();
             this.logger = loggerFactory.CreateLogger<CredentialProviderForAzureKeyVault>();
             this.clock = clock;
-            this.credentialHelper = credentialHelper;
+            this.managedIdentity = managedIdentity;
+            this.secretCache = secretCache;
             this.client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
@@ -54,12 +56,23 @@ namespace AutoCrane.Services
             }
 
             var kvResourceUrl = "https://vault.azure.net";
-            var accessToken = await this.credentialHelper.LookupAsync($"{CredentialProviderForAzureManagedIdentity.ProtocolName}{kvResourceUrl}");
+            var miCredSpec = $"{CredentialProviderForAzureManagedIdentity.ProtocolName}{kvResourceUrl}";
+            string secretToken;
+            if (this.secretCache.TryGetValue(miCredSpec, out var cachedSecret))
+            {
+                secretToken = cachedSecret.Secret;
+            }
+            else
+            {
+                var accessToken = await this.managedIdentity.LookupAsync(miCredSpec);
+                this.secretCache.TryAdd(miCredSpec, accessToken);
+                secretToken = accessToken.Secret;
+            }
 
             var requestUrl = $"https://{kvName}.vault.azure.net/secrets/{kvSecret}?api-version=7.0";
             this.logger.LogInformation($"GET {requestUrl}");
             using var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken.Secret);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", secretToken);
             using var response = await this.client.SendAsync(request);
             response.EnsureSuccessStatusCode();
             var secretJson = await response.Content.ReadAsStringAsync();
