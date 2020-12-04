@@ -33,7 +33,7 @@ namespace AutoCrane.Services
             return credentialSpec.StartsWith(Protocol + ":");
         }
 
-        public async Task<SecretCredential> LookupAsync(string credentialSpec)
+        public async Task<SecretCredential> LookupAsync(string credentialSpec, ICredentialHelper credentialHelper)
         {
             var specAndUrl = credentialSpec.Split(':', 2);
             if (specAndUrl.Length != 2)

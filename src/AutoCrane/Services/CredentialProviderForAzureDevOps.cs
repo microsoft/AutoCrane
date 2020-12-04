@@ -21,14 +21,12 @@ namespace AutoCrane.Services
         private readonly HttpClient client;
         private readonly ILogger<CredentialProviderForAzureDevOps> logger;
         private readonly IClock clock;
-        private readonly ICredentialHelper credentialHelper;
 
-        public CredentialProviderForAzureDevOps(ILoggerFactory loggerFactory, IClock clock, ICredentialHelper credentialHelper)
+        public CredentialProviderForAzureDevOps(ILoggerFactory loggerFactory, IClock clock)
         {
             this.client = new HttpClient();
             this.logger = loggerFactory.CreateLogger<CredentialProviderForAzureDevOps>();
             this.clock = clock;
-            this.credentialHelper = credentialHelper;
             this.client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
@@ -37,7 +35,7 @@ namespace AutoCrane.Services
             return credentialSpec.StartsWith(Protocol + ":");
         }
 
-        public async Task<SecretCredential> LookupAsync(string credentialSpec)
+        public async Task<SecretCredential> LookupAsync(string credentialSpec, ICredentialHelper credentialHelper)
         {
             var specSplits = credentialSpec.Split(':', 4);
             if (specSplits.Length != 4)
@@ -54,7 +52,7 @@ namespace AutoCrane.Services
                 throw new NotImplementedException($"spec {spec} not {Protocol}");
             }
 
-            var clientSecret = await this.credentialHelper.LookupAsync(clientSecretSpec);
+            var clientSecret = await credentialHelper.LookupAsync(clientSecretSpec);
 
             var requestUrl = $"https://app.vssps.visualstudio.com/oauth2/token";
             this.logger.LogInformation($"POST {requestUrl}");

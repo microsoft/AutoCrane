@@ -21,14 +21,12 @@ namespace AutoCrane.Services
         private readonly HttpClient client;
         private readonly ILogger<CredentialProviderForAzureKeyVault> logger;
         private readonly IClock clock;
-        private readonly ICredentialHelper credentialHelper;
 
-        public CredentialProviderForAzureKeyVault(ILoggerFactory loggerFactory, IClock clock, ICredentialHelper credentialHelper)
+        public CredentialProviderForAzureKeyVault(ILoggerFactory loggerFactory, IClock clock)
         {
             this.client = new HttpClient();
             this.logger = loggerFactory.CreateLogger<CredentialProviderForAzureKeyVault>();
             this.clock = clock;
-            this.credentialHelper = credentialHelper;
             this.client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
@@ -37,7 +35,7 @@ namespace AutoCrane.Services
             return credentialSpec.StartsWith(Protocol + ":");
         }
 
-        public async Task<SecretCredential> LookupAsync(string credentialSpec)
+        public async Task<SecretCredential> LookupAsync(string credentialSpec, ICredentialHelper credentialHelper)
         {
             var specSplits = credentialSpec.Split(':', 3);
             if (specSplits.Length != 3)
@@ -54,7 +52,7 @@ namespace AutoCrane.Services
             }
 
             var kvResourceUrl = "https://vault.azure.net";
-            var accessToken = await this.credentialHelper.LookupAsync($"{CredentialProviderForAzureManagedIdentity.ProtocolName}{kvResourceUrl}");
+            var accessToken = await credentialHelper.LookupAsync($"{CredentialProviderForAzureManagedIdentity.ProtocolName}{kvResourceUrl}");
 
             var requestUrl = $"https://{kvName}.vault.azure.net/secrets/{kvSecret}?api-version=7.0";
             this.logger.LogInformation($"GET {requestUrl}");

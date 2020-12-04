@@ -34,7 +34,7 @@ namespace AutoCrane.Services
                 return secret;
             }
 
-            var result = await provider.LookupAsync(credentialSpec);
+            var result = await provider.LookupAsync(credentialSpec, this);
 
             this.secretCache.TryAdd(credentialSpec, result);
 
