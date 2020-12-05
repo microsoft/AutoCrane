@@ -21,8 +21,6 @@ namespace AutoCrane.Services
         private const string GitLogDepthString = "2"; // needs to be less than clone depth
         private const string ProtocolGit = "git";
         private const string ProtocolAdoGit = "adogit";
-        private const string ProtocolAdoPat = "adopat";
-        private const string ProtocolAdoSp = "adosp";
         private readonly ILogger<DataRepositoryGitFetcher> logger;
         private readonly IProcessRunner runner;
         private readonly IFileHasher fileHasher;
@@ -43,7 +41,7 @@ namespace AutoCrane.Services
 
         public async Task<IReadOnlyList<DataRepositorySource>> FetchAsync(string url, string scratchDir, string archiveDropDir, CancellationToken token)
         {
-            this.logger.LogInformation($"FetchAsync {url} {scratchDir} {archiveDropDir}");
+            this.logger.LogInformation($"Git Repo Fetch: url={url} scratchDir={scratchDir} archiveDropDir={archiveDropDir}");
             var protocolAndUrl = url.Split('@', 2);
             if (protocolAndUrl.Length != 2)
             {
@@ -57,23 +55,8 @@ namespace AutoCrane.Services
             {
                 case ProtocolGit:
                     break;
-                case ProtocolAdoSp:
-                    {
-                        var credsAndUrl = url.Split('@', 2);
-                        if (credsAndUrl.Length != 2)
-                        {
-                            throw new ArgumentOutOfRangeException(nameof(url));
-                        }
 
-                        var credSpec = credsAndUrl[0];
-                        url = credsAndUrl[1];
-                        var accessToken = await this.credentialHelper.LookupAsync(credSpec);
-                        creds = $"bearer {accessToken}";
-                        break;
-                    }
-
-                case ProtocolAdoPat:
-                case ProtocolAdoGit: // deprecate this name eventually?
+                case ProtocolAdoGit:
                     {
                         var credsAndUrl = url.Split('@', 2);
                         if (credsAndUrl.Length != 2)
@@ -84,7 +67,7 @@ namespace AutoCrane.Services
                         var credSpec = credsAndUrl[0];
                         url = credsAndUrl[1];
                         var rawCreds = await this.credentialHelper.LookupAsync(credSpec);
-                        creds = "basic " + Convert.ToBase64String(Encoding.UTF8.GetBytes($":{rawCreds}"));
+                        creds = rawCreds.Secret;
                         break;
                     }
 

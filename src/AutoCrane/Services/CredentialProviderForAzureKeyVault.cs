@@ -52,7 +52,7 @@ namespace AutoCrane.Services
             }
 
             var kvResourceUrl = "https://vault.azure.net";
-            var accessToken = await credentialHelper.LookupAsync($"{CredentialProviderForAzureManagedIdentity.ProtocolName}{kvResourceUrl}");
+            var accessToken = await credentialHelper.LookupAsync($"{CredentialProviderForAzureManagedIdentity.ProtocolName}:{kvResourceUrl}");
 
             var requestUrl = $"https://{kvName}.vault.azure.net/secrets/{kvSecret}?api-version=7.0";
             this.logger.LogInformation($"GET {requestUrl}");

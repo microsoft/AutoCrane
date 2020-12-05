@@ -26,7 +26,7 @@ namespace AutoCrane.Services
             var provider = this.providers.Where(p => p.CanLookup(credentialSpec)).FirstOrDefault();
             if (provider == null)
             {
-                throw new ArgumentOutOfRangeException(nameof(credentialSpec));
+                throw new ArgumentOutOfRangeException($"{nameof(credentialSpec)}: {credentialSpec}");
             }
 
             if (this.secretCache.TryGetValue(credentialSpec, out var secret))

@@ -17,7 +17,7 @@ namespace AutoCrane.Services
 {
     internal sealed class CredentialProviderForAzureDevOps : ICredentialProvider
     {
-        private const string Protocol = "adosp";
+        private const string Protocol = "adocc";
         private readonly HttpClient client;
         private readonly ILogger<CredentialProviderForAzureDevOps> logger;
         private readonly IClock clock;
@@ -75,7 +75,7 @@ namespace AutoCrane.Services
             var expiresInString = ReadJsonValue(secretJson, "expires_in");
             var expiresIn = long.Parse(expiresInString);
             var expires = this.clock.Get() + TimeSpan.FromSeconds(expiresIn);
-            return new SecretCredential(accessToken, expires);
+            return new SecretCredential($"bearer {accessToken}", expires);
         }
 
         private static string ReadJsonValue(string jsonString, string property)
