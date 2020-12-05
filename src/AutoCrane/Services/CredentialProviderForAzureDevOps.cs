@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -14,18 +15,17 @@ using Microsoft.Extensions.Logging;
 
 namespace AutoCrane.Services
 {
-    internal sealed class CredentialProviderForAzureKeyVault : ICredentialProvider
+    internal sealed class CredentialProviderForAzureDevOps : ICredentialProvider
     {
-        private const string Protocol = "azkv";
-        private static readonly TimeSpan SecretCacheTimeout = TimeSpan.FromMinutes(30);
+        private const string Protocol = "adocc";
         private readonly HttpClient client;
-        private readonly ILogger<CredentialProviderForAzureKeyVault> logger;
+        private readonly ILogger<CredentialProviderForAzureDevOps> logger;
         private readonly IClock clock;
 
-        public CredentialProviderForAzureKeyVault(ILoggerFactory loggerFactory, IClock clock)
+        public CredentialProviderForAzureDevOps(ILoggerFactory loggerFactory, IClock clock)
         {
             this.client = new HttpClient();
-            this.logger = loggerFactory.CreateLogger<CredentialProviderForAzureKeyVault>();
+            this.logger = loggerFactory.CreateLogger<CredentialProviderForAzureDevOps>();
             this.clock = clock;
             this.client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
@@ -37,32 +37,45 @@ namespace AutoCrane.Services
 
         public async Task<SecretCredential> LookupAsync(string credentialSpec, ICredentialHelper credentialHelper)
         {
-            var specSplits = credentialSpec.Split(':', 3);
-            if (specSplits.Length != 3)
+            var specSplits = credentialSpec.Split(':', 4);
+            if (specSplits.Length != 4)
             {
                 throw new ArgumentOutOfRangeException(nameof(credentialSpec));
             }
 
             var spec = specSplits[0];
-            var kvName = specSplits[1];
-            var kvSecret = specSplits[2];
+            var resource = specSplits[1];
+            var clientId = specSplits[2];
+            var clientSecretSpec = specSplits[3];
             if (spec != Protocol)
             {
                 throw new NotImplementedException($"spec {spec} not {Protocol}");
             }
 
-            var kvResourceUrl = "https://vault.azure.net";
-            var accessToken = await credentialHelper.LookupAsync($"{CredentialProviderForAzureManagedIdentity.ProtocolName}:{kvResourceUrl}");
+            var clientSecret = await credentialHelper.LookupAsync(clientSecretSpec);
 
-            var requestUrl = $"https://{kvName}.vault.azure.net/secrets/{kvSecret}?api-version=7.0";
-            this.logger.LogInformation($"GET {requestUrl}");
-            using var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken.Secret);
+            var requestUrl = $"https://app.vssps.visualstudio.com/oauth2/token";
+            this.logger.LogInformation($"POST {requestUrl}");
+            using var request = new HttpRequestMessage(HttpMethod.Post, requestUrl);
+            var postBody = new List<KeyValuePair<string?, string?>>()
+            {
+                new KeyValuePair<string?, string?>("grant_type", "client_credentials"),
+                new KeyValuePair<string?, string?>("scope", "vso.code"),
+                new KeyValuePair<string?, string?>("client_id", clientId),
+                new KeyValuePair<string?, string?>("client_secret", clientSecret.Secret),
+                new KeyValuePair<string?, string?>("resource", resource),
+            };
+
+            request.Content = new FormUrlEncodedContent(postBody);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("applicaiton/json"));
             using var response = await this.client.SendAsync(request);
             response.EnsureSuccessStatusCode();
             var secretJson = await response.Content.ReadAsStringAsync();
-            var value = ReadJsonValue(secretJson, "value");
-            return new SecretCredential(value, this.clock.Get() + SecretCacheTimeout);
+            var accessToken = ReadJsonValue(secretJson, "access_token");
+            var expiresInString = ReadJsonValue(secretJson, "expires_in");
+            var expiresIn = long.Parse(expiresInString);
+            var expires = this.clock.Get() + TimeSpan.FromSeconds(expiresIn);
+            return new SecretCredential($"bearer {accessToken}", expires);
         }
 
         private static string ReadJsonValue(string jsonString, string property)

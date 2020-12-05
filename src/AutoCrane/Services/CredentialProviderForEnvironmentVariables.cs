@@ -4,6 +4,7 @@
 using System;
 using System.Threading.Tasks;
 using AutoCrane.Interfaces;
+using AutoCrane.Models;
 
 namespace AutoCrane.Services
 {
@@ -16,7 +17,7 @@ namespace AutoCrane.Services
             return credentialSpec.StartsWith(EnvSecret + ":");
         }
 
-        public Task<string> LookupAsync(string credentialSpec)
+        public Task<SecretCredential> LookupAsync(string credentialSpec, ICredentialHelper credentialHelper)
         {
             var specAndUrl = credentialSpec.Split(':', 2);
             if (specAndUrl.Length != 2)
@@ -31,7 +32,8 @@ namespace AutoCrane.Services
                 throw new NotImplementedException($"spec {spec} not {EnvSecret}");
             }
 
-            return Task.FromResult(Environment.GetEnvironmentVariable(url) ?? string.Empty);
+            // expire very far in the future (using MaxValue could cause unintended overflows)
+            return Task.FromResult(new SecretCredential(Environment.GetEnvironmentVariable(url) ?? string.Empty, DateTimeOffset.FromUnixTimeSeconds(4_000_000_000)));
         }
     }
 }

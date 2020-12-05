@@ -41,7 +41,7 @@ namespace AutoCrane.Services
 
         public async Task<IReadOnlyList<DataRepositorySource>> FetchAsync(string url, string scratchDir, string archiveDropDir, CancellationToken token)
         {
-            this.logger.LogInformation($"FetchAsync {url} {scratchDir} {archiveDropDir}");
+            this.logger.LogInformation($"Git Repo Fetch: url={url} scratchDir={scratchDir} archiveDropDir={archiveDropDir}");
             var protocolAndUrl = url.Split('@', 2);
             if (protocolAndUrl.Length != 2)
             {
@@ -55,18 +55,22 @@ namespace AutoCrane.Services
             {
                 case ProtocolGit:
                     break;
+
                 case ProtocolAdoGit:
-                    var credsAndUrl = url.Split('@', 2);
-                    if (credsAndUrl.Length != 2)
                     {
-                        throw new ArgumentOutOfRangeException(nameof(url));
+                        var credsAndUrl = url.Split('@', 2);
+                        if (credsAndUrl.Length != 2)
+                        {
+                            throw new ArgumentOutOfRangeException(nameof(url));
+                        }
+
+                        var credSpec = credsAndUrl[0];
+                        url = credsAndUrl[1];
+                        var rawCreds = await this.credentialHelper.LookupAsync(credSpec);
+                        creds = rawCreds.Secret;
+                        break;
                     }
 
-                    var credSpec = credsAndUrl[0];
-                    url = credsAndUrl[1];
-                    var rawCreds = await this.credentialHelper.LookupAsync(credSpec);
-                    creds = Convert.ToBase64String(Encoding.UTF8.GetBytes($":{rawCreds}"));
-                    break;
                 default:
                     throw new NotImplementedException($"protocol: {protocol}");
             }
@@ -165,7 +169,7 @@ namespace AutoCrane.Services
             }
             else
             {
-                result = await this.runner.RunAsync(GitExe, dir, new string[] { "-c", $"http.extraheader=authorization: basic {creds}", "clone", url, ".", "--depth", GitCloneDepthString }, token, new string[] { creds });
+                result = await this.runner.RunAsync(GitExe, dir, new string[] { "-c", $"http.extraheader=authorization: {creds}", "clone", url, ".", "--depth", GitCloneDepthString }, token, new string[] { creds });
             }
 
             result.ThrowIfFailed();
@@ -191,10 +195,10 @@ namespace AutoCrane.Services
                 }
                 else
                 {
-                    var result = await this.runner.RunAsync(GitExe, dir, new string[] { "-c", $"http.extraheader=authorization: basic {creds}", "fetch", "--depth", GitCloneDepthString, "origin" }, token, new string[] { creds });
+                    var result = await this.runner.RunAsync(GitExe, dir, new string[] { "-c", $"http.extraheader=authorization: {creds}", "fetch", "--depth", GitCloneDepthString, "origin" }, token, new string[] { creds });
                     result.ThrowIfFailed();
 
-                    result = await this.runner.RunAsync(GitExe, dir, new string[] { "-c", $"http.extraheader=authorization: basic {creds}", "checkout", "FETCH_HEAD" }, token, new string[] { creds });
+                    result = await this.runner.RunAsync(GitExe, dir, new string[] { "-c", $"http.extraheader=authorization: {creds}", "checkout", "FETCH_HEAD" }, token, new string[] { creds });
                     result.ThrowIfFailed();
                 }
             }
