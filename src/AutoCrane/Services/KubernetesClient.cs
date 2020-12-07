@@ -65,6 +65,11 @@ namespace AutoCrane.Services
             }
         }
 
+        public Task<LeaderElectionResults> ElectLeaderAsync(string election)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<IReadOnlyList<PodIdentifier>> GetFailingPodsAsync(string ns)
         {
             try
