@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace AutoCrane.Apps
 {
-    public sealed class DataDeployInit
+    public sealed class DataDeployInit : IAutoCraneService
     {
         private const int ConsecutiveErrorCountBeforeExiting = 3;
         private const int IterationLoopSeconds = 15;
@@ -22,15 +22,17 @@ namespace AutoCrane.Apps
             this.dataDeploymentRequestProcessor = dataDeploymentRequestProcessor;
         }
 
-        public async Task<int> RunAsync(int iterations = int.MaxValue)
+        public async Task<int> RunAsync(CancellationToken token)
         {
             var errorCount = 0;
 
             while (errorCount < ConsecutiveErrorCountBeforeExiting)
             {
+                token.ThrowIfCancellationRequested();
+
                 try
                 {
-                    await this.dataDeploymentRequestProcessor.HandleRequestsAsync(CancellationToken.None);
+                    await this.dataDeploymentRequestProcessor.HandleRequestsAsync(token);
                     return 0;
                 }
                 catch (Exception e)
@@ -39,7 +41,7 @@ namespace AutoCrane.Apps
                     errorCount++;
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds));
+                await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds), token);
             }
 
             this.logger.LogError($"Hit max consecutive error count...exiting...");

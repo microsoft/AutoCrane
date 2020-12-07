@@ -3,6 +3,7 @@
 
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoCrane.Interfaces;
 using AutoCrane.Models;
@@ -10,7 +11,7 @@ using Microsoft.Extensions.Options;
 
 namespace AutoCrane.Apps
 {
-    internal sealed class GetWatchdogService
+    internal sealed class GetWatchdogService : IAutoCraneService
     {
         private readonly IWatchdogStatusGetter watchdogStatusGetter;
         private readonly IOptions<PodIdentifierOptions> pod;
@@ -21,7 +22,7 @@ namespace AutoCrane.Apps
             this.pod = podIdentifier;
         }
 
-        public async Task<int> RunAsync()
+        public async Task<int> RunAsync(CancellationToken token)
         {
             var pod = this.pod.Value;
             ThrowIfNullOrEmpty(pod?.Namespace, "Pod.Namespace");

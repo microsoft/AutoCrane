@@ -3,6 +3,7 @@
 
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoCrane.Interfaces;
 using AutoCrane.Models;
@@ -10,7 +11,7 @@ using Microsoft.Extensions.Options;
 
 namespace AutoCrane.Apps
 {
-    internal sealed class PostWatchdogService
+    internal sealed class PostWatchdogService : IAutoCraneService
     {
         private readonly IWatchdogStatusPutter watchdogStatusPutter;
         private readonly IOptions<WatchdogStatus> status;
@@ -23,7 +24,7 @@ namespace AutoCrane.Apps
             this.pod = podIdentifier;
         }
 
-        public async Task<int> RunAsync()
+        public async Task<int> RunAsync(CancellationToken token)
         {
             var status = this.status.Value;
             var pod = this.pod.Value;

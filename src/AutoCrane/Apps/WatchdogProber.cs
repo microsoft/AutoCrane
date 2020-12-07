@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 
 namespace AutoCrane.Apps
 {
-    public sealed class WatchdogProber
+    public sealed class WatchdogProber : IAutoCraneService
     {
         private const string ProbeAnnotationPrefix = "probe.autocrane.io/";
         private const string WatchdogUrlRegexString = "POD_IP:([0-9]+)/([A-Za-z0-9_-]+)";
@@ -37,8 +37,9 @@ namespace AutoCrane.Apps
             this.httpClient = new HttpClient();
         }
 
-        public async Task<int> RunAsync(int iterations = int.MaxValue)
+        public async Task<int> RunAsync(CancellationToken token)
         {
+            var iterations = int.MaxValue;
             var errorCount = 0;
             if (!this.config.Namespaces.Any())
             {
@@ -48,6 +49,8 @@ namespace AutoCrane.Apps
 
             while (iterations > 0)
             {
+                token.ThrowIfCancellationRequested();
+
                 if (errorCount > ConsecutiveErrorCountBeforeExiting)
                 {
                     this.logger.LogError($"Hit max consecutive error count...exiting...");
@@ -114,7 +117,7 @@ namespace AutoCrane.Apps
 
                     sw.Stop();
                     this.logger.LogInformation($"Scanned {nsCount} namespaces, {podCount} pods, and {probeCount} probes in {sw.Elapsed}");
-                    await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds));
+                    await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds), token);
                     iterations--;
                     errorCount = 0;
                 }
@@ -122,7 +125,7 @@ namespace AutoCrane.Apps
                 {
                     this.logger.LogError($"Unhandled exception: {e}");
                     errorCount++;
-                    await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds));
+                    await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds), token);
                 }
             }
 

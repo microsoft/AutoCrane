@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -14,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace AutoCrane.Apps
 {
-    public sealed class Orchestrator
+    public sealed class Orchestrator : IAutoCraneService
     {
         private const int ConsecutiveErrorCountBeforeExiting = 5;
         private const int IterationLoopSeconds = 60;
@@ -38,8 +37,9 @@ namespace AutoCrane.Apps
             this.logger = loggerFactory.CreateLogger<Orchestrator>();
         }
 
-        public async Task<int> RunAsync(int iterations = int.MaxValue)
+        public async Task<int> RunAsync(CancellationToken token)
         {
+            var iterations = int.MaxValue;
             var errorCount = 0;
             if (!this.config.Namespaces.Any())
             {
@@ -59,7 +59,9 @@ namespace AutoCrane.Apps
 
                 try
                 {
-                    var manifest = await this.manifestFetcher.FetchAsync(CancellationToken.None);
+                    token.ThrowIfCancellationRequested();
+
+                    var manifest = await this.manifestFetcher.FetchAsync(token);
                     var requests = await this.FetchDataRequestsAsync(this.config.Namespaces);
                     await this.ProcessDataRequestsAsync(manifest, requests);
 
@@ -91,7 +93,7 @@ namespace AutoCrane.Apps
 
                     podsWithFailingWatchdog.Enqueue(thisIterationFailingPods);
 
-                    await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds));
+                    await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds), token);
                     iterations--;
                     errorCount = 0;
                 }
@@ -99,7 +101,7 @@ namespace AutoCrane.Apps
                 {
                     this.logger.LogError($"Unhandled exception: {e}");
                     errorCount++;
-                    await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds));
+                    await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds), token);
                 }
             }
 
