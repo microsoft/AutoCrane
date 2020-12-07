@@ -3,8 +3,11 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using AutoCrane.Apps;
+using AutoCrane.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Prometheus.DotNetRuntime;
 
 namespace AutoCrane
@@ -43,19 +46,26 @@ namespace AutoCrane
             using var collector = DotNetRuntimeStatsBuilder.Default().StartCollecting();
             try
             {
+                using var cts = new CancellationTokenSource();
+                Console.CancelKeyPress += (object? sender, ConsoleCancelEventArgs eventArgs) =>
+                {
+                    cts.Cancel();
+                    eventArgs.Cancel = false;
+                };
+
                 switch (mode)
                 {
                     case "orchestrate":
-                        return DependencyInjection.GetServiceProvider(newargs).GetRequiredService<Orchestrator>().RunAsync().GetAwaiter().GetResult();
+                        return ConsoleWrapper<Orchestrator>(newargs, cts.Token);
 
                     case "getwatchdog":
-                        return DependencyInjection.GetServiceProvider(newargs).GetRequiredService<GetWatchdogService>().RunAsync().GetAwaiter().GetResult();
+                        return ConsoleWrapper<GetWatchdogService>(newargs, cts.Token);
 
                     case "postwatchdog":
-                        return DependencyInjection.GetServiceProvider(newargs).GetRequiredService<PostWatchdogService>().RunAsync().GetAwaiter().GetResult();
+                        return ConsoleWrapper<PostWatchdogService>(newargs, cts.Token);
 
                     case "watchdogprober":
-                        return DependencyInjection.GetServiceProvider(newargs).GetRequiredService<WatchdogProber>().RunAsync().GetAwaiter().GetResult();
+                        return ConsoleWrapper<WatchdogProber>(newargs, cts.Token);
 
                     case "testworkload":
                         WebHosting.RunWebService<TestWorkload>(newargs);
@@ -69,7 +79,7 @@ namespace AutoCrane
                         return GenerateYaml.Run(newargs);
 
                     case "datadeployinit":
-                        return DependencyInjection.GetServiceProvider(newargs).GetRequiredService<DataDeployInit>().RunAsync().GetAwaiter().GetResult();
+                        return ConsoleWrapper<DataDeployInit>(newargs, cts.Token);
 
                     case "datadeploy":
                         WebHosting.RunWebService<DataDeployer>(newargs);
@@ -92,6 +102,20 @@ namespace AutoCrane
             finally
             {
                 Serilog.Log.CloseAndFlush();
+            }
+        }
+
+        private static int ConsoleWrapper<T>(string[] newargs, CancellationToken token)
+            where T : IAutoCraneService
+        {
+            try
+            {
+                return DependencyInjection.GetServiceProvider(newargs).GetRequiredService<T>().RunAsync(token).GetAwaiter().GetResult();
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine($"Unhandled exception: {e}");
+                return 1;
             }
         }
     }
