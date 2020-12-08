@@ -9,6 +9,6 @@ namespace AutoCrane.Interfaces
 {
     public interface IDataRepositoryKnownGoodAccessor
     {
-        Task<DataRepositoryKnownGoods> GetOrCreateAsync(DataRepositoryManifest manifest, CancellationToken token);
+        Task<DataRepositoryKnownGoods> GetOrCreateAsync(string ns, DataRepositoryManifest manifest, CancellationToken token);
     }
 }

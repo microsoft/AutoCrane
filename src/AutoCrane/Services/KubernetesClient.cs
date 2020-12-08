@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoCrane.Exceptions;
 using AutoCrane.Interfaces;
@@ -18,6 +19,7 @@ namespace AutoCrane.Services
 {
     internal sealed class KubernetesClient
     {
+        private const string AutoCraneLastKnownGoodEndpointName = "autocranelkg";
         private readonly ILogger<KubernetesClient> logger;
         private readonly Kubernetes client;
         private readonly IWatchdogStatusAggregator statusAggregator;
@@ -29,6 +31,62 @@ namespace AutoCrane.Services
             this.client = new Kubernetes(configProvider.Get());
             this.statusAggregator = statusAggregator;
             this.config = config;
+        }
+
+        public async Task<IReadOnlyDictionary<string, string>> GetLastKnownGoodAsync(string ns, CancellationToken token)
+        {
+            try
+            {
+                if (!this.config.IsAllowedNamespace(ns))
+                {
+                    throw new ForbiddenException($"namespace: {ns}");
+                }
+
+                var ep = await this.client.ReadNamespacedEndpointsAsync(AutoCraneLastKnownGoodEndpointName, ns, cancellationToken: token);
+                return (IReadOnlyDictionary<string, string>)ep.Annotations();
+            }
+            catch (HttpOperationException e)
+            {
+                if (e.Response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    return new Dictionary<string,string>();
+                }
+
+                if (!string.IsNullOrEmpty(e.Response.Content))
+                {
+                    this.logger.LogError($"Exception response content: {e.Response.Content}");
+                }
+
+                throw;
+            }
+        }
+
+        public async Task PutLastKnownGoodAsync(string ns, IReadOnlyDictionary<string, string> annotationsToUpdate, CancellationToken token)
+        {
+            try
+            {
+                if (!this.config.IsAllowedNamespace(ns))
+                {
+                    throw new ForbiddenException($"namespace: {ns}");
+                }
+
+                var ep = await this.client.ReadNamespacedEndpointsAsync(AutoCraneLastKnownGoodEndpointName, ns, cancellationToken: token);
+                var newannotations = new Dictionary<string, string>(ep.Annotations() ?? new Dictionary<string, string>());
+                foreach (var ann in annotationsToUpdate)
+                {
+                    newannotations[ann.Key] = ann.Value;
+                }
+
+                var patch = new JsonPatchDocument<V1Endpoints>();
+                patch.Replace(e => e.Metadata.Annotations, newannotations);
+                var result = await this.client.PatchNamespacedEndpointsAsync(new V1Patch(patch), AutoCraneLastKnownGoodEndpointName, ns, cancellationToken: token);
+                Console.Error.WriteLine($"{result.Name()} updated");
+            }
+            catch (HttpOperationException e)
+            {
+                this.logger.LogError($"Exception Putting LKG: {e.Response.Content}");
+                throw;
+            }
         }
 
         public async Task EvictPodAsync(PodIdentifier p)

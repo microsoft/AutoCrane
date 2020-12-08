@@ -24,9 +24,10 @@ namespace AutoCrane.Apps
         private readonly IPodDataRequestGetter dataRequestGetter;
         private readonly IDataRepositoryManifestFetcher manifestFetcher;
         private readonly IPodAnnotationPutter podAnnotationPutter;
+        private readonly IDataRepositoryKnownGoodAccessor knownGoodAccessor;
         private readonly ILogger<Orchestrator> logger;
 
-        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter, IPodDataRequestGetter podGetter, IDataRepositoryManifestFetcher manifestFetcher, IPodAnnotationPutter podAnnotationPutter)
+        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter, IPodDataRequestGetter podGetter, IDataRepositoryManifestFetcher manifestFetcher, IPodAnnotationPutter podAnnotationPutter, IDataRepositoryKnownGoodAccessor knownGoodAccessor)
         {
             this.config = config;
             this.failingPodGetter = failingPodGetter;
@@ -34,6 +35,7 @@ namespace AutoCrane.Apps
             this.dataRequestGetter = podGetter;
             this.manifestFetcher = manifestFetcher;
             this.podAnnotationPutter = podAnnotationPutter;
+            this.knownGoodAccessor = knownGoodAccessor;
             this.logger = loggerFactory.CreateLogger<Orchestrator>();
         }
 
@@ -62,13 +64,15 @@ namespace AutoCrane.Apps
                     token.ThrowIfCancellationRequested();
 
                     var manifest = await this.manifestFetcher.FetchAsync(token);
-                    var lkg = await this.dataKnownGoods.GetOrCreateAsync(manifest, token);
-                    var requests = await this.FetchDataRequestsAsync(this.config.Namespaces);
-                    await this.ProcessDataRequestsAsync(manifest, requests);
 
                     var thisIterationFailingPods = new List<PodIdentifier>();
                     foreach (var ns in this.config.Namespaces)
                     {
+                        var requests = await this.dataRequestGetter.GetAsync(ns);
+                        await this.ProcessDataRequestsAsync(manifest, requests);
+
+                        var lkg = await this.knownGoodAccessor.GetOrCreateAsync(ns, manifest, token);
+
                         var failingPods = await this.failingPodGetter.GetFailingPodsAsync(ns);
                         thisIterationFailingPods.AddRange(failingPods);
                     }

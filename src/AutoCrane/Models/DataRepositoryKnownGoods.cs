@@ -7,11 +7,11 @@ namespace AutoCrane.Models
 {
     public sealed class DataRepositoryKnownGoods
     {
-        public DataRepositoryKnownGoods(IDictionary<string, string> knownGoodVersions)
+        public DataRepositoryKnownGoods(IReadOnlyDictionary<string, string> knownGoodVersions)
         {
             this.KnownGoodVersions = knownGoodVersions;
         }
 
-        public IDictionary<string, string> KnownGoodVersions { get; }
+        public IReadOnlyDictionary<string, string> KnownGoodVersions { get; }
     }
 }
