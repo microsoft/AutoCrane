@@ -62,6 +62,7 @@ namespace AutoCrane.Apps
                     token.ThrowIfCancellationRequested();
 
                     var manifest = await this.manifestFetcher.FetchAsync(token);
+                    var lkg = await this.dataKnownGoods.GetOrCreateAsync(manifest, token);
                     var requests = await this.FetchDataRequestsAsync(this.config.Namespaces);
                     await this.ProcessDataRequestsAsync(manifest, requests);
 

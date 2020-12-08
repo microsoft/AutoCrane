@@ -49,6 +49,7 @@ namespace AutoCrane
             services.AddSingleton<IFileHasher, FileHasher>();
             services.AddSingleton<IPodDataRequestGetter, PodDataRequestGetter>();
             services.AddSingleton<ILeaderElection, LeaderElection>();
+            services.AddSingleton<IDataRepositoryKnownGoodAccessor, DataRepositoryKnownGoodAccessor>();
             services.AddSingleton<IDataDeploymentRequestProcessor, DataDeploymentRequestProcessor>();
             services.AddSingleton<ISecretCache, SecretCache>();
             services.AddSingleton<ICredentialHelper, CredentialHelper>();

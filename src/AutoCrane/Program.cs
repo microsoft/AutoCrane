@@ -49,6 +49,7 @@ namespace AutoCrane
                 using var cts = new CancellationTokenSource();
                 Console.CancelKeyPress += (object? sender, ConsoleCancelEventArgs eventArgs) =>
                 {
+                    Console.Error.WriteLine("Handling Ctrl-C...");
                     cts.Cancel();
                     eventArgs.Cancel = false;
                 };
