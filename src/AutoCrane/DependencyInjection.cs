@@ -50,6 +50,7 @@ namespace AutoCrane
             services.AddSingleton<IPodDataRequestGetter, PodDataRequestGetter>();
             services.AddSingleton<ILeaderElection, LeaderElection>();
             services.AddSingleton<IDataRepositoryKnownGoodAccessor, DataRepositoryKnownGoodAccessor>();
+            services.AddSingleton<IDataRepositoryUpgradeAccessor, DataRepositoryUpgradeAccessor>();
             services.AddSingleton<IDataDeploymentRequestProcessor, DataDeploymentRequestProcessor>();
             services.AddSingleton<ISecretCache, SecretCache>();
             services.AddSingleton<ICredentialHelper, CredentialHelper>();

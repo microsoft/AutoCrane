@@ -19,7 +19,6 @@ namespace AutoCrane.Services
 {
     internal sealed class KubernetesClient
     {
-        private const string AutoCraneLastKnownGoodEndpointName = "autocranelkg";
         private readonly ILogger<KubernetesClient> logger;
         private readonly Kubernetes client;
         private readonly IWatchdogStatusAggregator statusAggregator;
@@ -33,7 +32,7 @@ namespace AutoCrane.Services
             this.config = config;
         }
 
-        public async Task<IReadOnlyDictionary<string, string>> GetLastKnownGoodAsync(string ns, CancellationToken token)
+        public async Task<IReadOnlyDictionary<string, string>> GetEndpointAnnotationsAsync(string ns, string endpoint, CancellationToken token)
         {
             try
             {
@@ -42,7 +41,7 @@ namespace AutoCrane.Services
                     throw new ForbiddenException($"namespace: {ns}");
                 }
 
-                var ep = await this.client.ReadNamespacedEndpointsAsync(AutoCraneLastKnownGoodEndpointName, ns, cancellationToken: token);
+                var ep = await this.client.ReadNamespacedEndpointsAsync(endpoint, ns, cancellationToken: token);
                 return (IReadOnlyDictionary<string, string>)ep.Annotations() ?? new Dictionary<string, string>();
             }
             catch (HttpOperationException e)
@@ -61,7 +60,7 @@ namespace AutoCrane.Services
             }
         }
 
-        public async Task PutLastKnownGoodAsync(string ns, IReadOnlyDictionary<string, string> annotationsToUpdate, CancellationToken token)
+        public async Task PutEndpointAnnotationsAsync(string ns, string endpoint, IReadOnlyDictionary<string, string> annotationsToUpdate, CancellationToken token)
         {
             V1Endpoints ep;
             try
@@ -71,7 +70,7 @@ namespace AutoCrane.Services
                     throw new ForbiddenException($"namespace: {ns}");
                 }
 
-                ep = await this.client.ReadNamespacedEndpointsAsync(AutoCraneLastKnownGoodEndpointName, ns, cancellationToken: token);
+                ep = await this.client.ReadNamespacedEndpointsAsync(endpoint, ns, cancellationToken: token);
             }
             catch (HttpOperationException e)
             {
@@ -82,7 +81,7 @@ namespace AutoCrane.Services
                         Metadata = new V1ObjectMeta()
                         {
                             NamespaceProperty = ns,
-                            Name = AutoCraneLastKnownGoodEndpointName,
+                            Name = endpoint,
                         },
                     };
 
@@ -105,7 +104,7 @@ namespace AutoCrane.Services
 
                 var patch = new JsonPatchDocument<V1Endpoints>();
                 patch.Replace(e => e.Metadata.Annotations, newannotations);
-                var result = await this.client.PatchNamespacedEndpointsAsync(new V1Patch(patch), AutoCraneLastKnownGoodEndpointName, ns, cancellationToken: token);
+                var result = await this.client.PatchNamespacedEndpointsAsync(new V1Patch(patch), endpoint, ns, cancellationToken: token);
                 Console.Error.WriteLine($"{result.Name()} updated");
             }
             catch (HttpOperationException e)

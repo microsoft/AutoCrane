@@ -68,10 +68,14 @@ namespace AutoCrane.Apps
                     var thisIterationFailingPods = new List<PodIdentifier>();
                     foreach (var ns in this.config.Namespaces)
                     {
-                        var requests = await this.dataRequestGetter.GetAsync(ns);
-                        await this.ProcessDataRequestsAsync(manifest, requests);
-
                         var lkg = await this.knownGoodAccessor.GetOrCreateAsync(ns, manifest, token);
+                        var requests = await this.dataRequestGetter.GetAsync(ns);
+                        await this.ProcessDataRequestsAsync(lkg, requests);
+
+                        if (lkg.OngoingUpdates.Any())
+                        {
+
+                        }
 
                         var failingPods = await this.failingPodGetter.GetFailingPodsAsync(ns);
                         thisIterationFailingPods.AddRange(failingPods);
@@ -113,10 +117,8 @@ namespace AutoCrane.Apps
             return 0;
         }
 
-        private async Task ProcessDataRequestsAsync(DataRepositoryManifest manifest, IReadOnlyList<PodDataRequestInfo> requests)
+        private async Task ProcessDataRequestsAsync(DataRepositoryKnownGoods lkg, IReadOnlyList<PodDataRequestInfo> requests)
         {
-            // fixme todo this logic. we need to support upgrades (this doesn't)
-            // and better logic for picking the first version (this chooses latest not LKG)
             foreach (var podRequest in requests.Where(r => r.NeedsRequest.Any()))
             {
                 var annotationsToAdd = new List<KeyValuePair<string, string>>();
@@ -124,32 +126,14 @@ namespace AutoCrane.Apps
                 {
                     if (podRequest.DataRepos.TryGetValue(request, out var dataRepoSpec))
                     {
-                        if (manifest.Sources.TryGetValue(dataRepoSpec, out var sources))
+                        if (lkg.KnownGoodVersions.TryGetValue(dataRepoSpec, out var requestSpec))
                         {
-                            this.logger.LogInformation($"Pod {podRequest.Id} requesting initial data {dataRepoSpec}");
-
-                            var sourceToPick = sources.OrderByDescending(k => k.Timestamp).FirstOrDefault();
-                            if (sourceToPick is null)
-                            {
-                                this.logger.LogError($"Pod {podRequest.Id} is requesting data repo {dataRepoSpec} does not have any available versions");
-                            }
-                            else
-                            {
-                                var downloadRequest = new DataDownloadRequestDetails()
-                                {
-                                    Hash = sourceToPick.Hash,
-                                    Path = sourceToPick.ArchiveFilePath,
-                                };
-
-                                this.logger.LogInformation($"Pod {podRequest.Id} requesting data {dataRepoSpec}, giving {downloadRequest.Path}");
-                                annotationsToAdd.Add(new KeyValuePair<string, string>(
-                                    $"{CommonAnnotations.DataRequestPrefix}{request}",
-                                    Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(downloadRequest))));
-                            }
+                            this.logger.LogInformation($"Pod {podRequest.Id} requesting initial data {dataRepoSpec}, got LKG {requestSpec}");
+                            annotationsToAdd.Add(new KeyValuePair<string, string>($"{CommonAnnotations.DataRequestPrefix}{request}", requestSpec));
                         }
                         else
                         {
-                            this.logger.LogError($"Pod {podRequest.Id} is requesting data repo {dataRepoSpec} which is not found in manifest sources: {string.Join(',', manifest.Sources.Keys)}");
+                            this.logger.LogError($"Pod {podRequest.Id} is requesting data repo {dataRepoSpec} which is not found in LKG sources: {string.Join(',', lkg.KnownGoodVersions.Keys)}");
                         }
                     }
                     else

@@ -13,21 +13,20 @@ using Microsoft.Extensions.Logging;
 
 namespace AutoCrane.Services
 {
-    internal sealed class DataRepositoryKnownGoodAccessor : IDataRepositoryKnownGoodAccessor
+    internal sealed class DataRepositoryUpgradeAccessor : IDataRepositoryUpgradeAccessor
     {
-        private const string AutoCraneLastKnownGoodEndpointName = "autocranelkg";
-        private readonly ILogger<DataRepositoryKnownGoodAccessor> logger;
+        private readonly ILogger<DataRepositoryUpgradeAccessor> logger;
         private readonly KubernetesClient client;
 
-        public DataRepositoryKnownGoodAccessor(ILoggerFactory loggerFactory, KubernetesClient client)
+        public DataRepositoryUpgradeAccessor(ILoggerFactory loggerFactory, KubernetesClient client)
         {
-            this.logger = loggerFactory.CreateLogger<DataRepositoryKnownGoodAccessor>();
+            this.logger = loggerFactory.CreateLogger<DataRepositoryUpgradeAccessor>();
             this.client = client;
         }
 
-        public async Task<DataRepositoryKnownGoods> GetOrCreateAsync(string ns, DataRepositoryManifest manifest, CancellationToken token)
+        public async Task<DataRepositoryUpgradeInfo> GetOrUpdateAsync(string ns, DataRepositoryManifest manifest, CancellationToken token)
         {
-            var lkg = await this.client.GetEndpointAnnotationsAsync(ns, AutoCraneLastKnownGoodEndpointName, token);
+            var lkg = await this.client.GetLastUpgradeAsync(ns, token);
             var itemsToAdd = new Dictionary<string, string>();
             foreach (var item in manifest.Sources)
             {
@@ -47,10 +46,10 @@ namespace AutoCrane.Services
 
             if (itemsToAdd.Any())
             {
-                await this.client.PutEndpointAnnotationsAsync(ns, AutoCraneLastKnownGoodEndpointName, itemsToAdd, token);
+                await this.client.PutLastUpgradeAsync(ns, itemsToAdd, token);
             }
 
-            return new DataRepositoryKnownGoods(lkg.Union(itemsToAdd).ToDictionary(ks => ks.Key, vs => vs.Value));
+            return new DataRepositoryUpgradeInfo(lkg.Union(itemsToAdd).ToDictionary(ks => ks.Key, vs => vs.Value));
         }
     }
 }
