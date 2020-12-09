@@ -27,7 +27,7 @@ namespace AutoCrane.Services
         public async Task<DataRepositoryKnownGoods> GetOrCreateAsync(string ns, DataRepositoryManifest manifest, CancellationToken token)
         {
             var lkg = await this.client.GetLastKnownGoodAsync(ns, token);
-            var itemsToAdd = new Dictionary<string, string>(lkg);
+            var itemsToAdd = new Dictionary<string, string>();
             foreach (var item in manifest.Sources)
             {
                 if (!lkg.ContainsKey(item.Key) && item.Value.Count > 0)
@@ -44,7 +44,11 @@ namespace AutoCrane.Services
                 }
             }
 
-            await this.client.PutLastKnownGoodAsync(ns, itemsToAdd, token);
+            if (itemsToAdd.Any())
+            {
+                await this.client.PutLastKnownGoodAsync(ns, itemsToAdd, token);
+            }
+
             return new DataRepositoryKnownGoods(itemsToAdd);
         }
     }

@@ -43,13 +43,13 @@ namespace AutoCrane.Services
                 }
 
                 var ep = await this.client.ReadNamespacedEndpointsAsync(AutoCraneLastKnownGoodEndpointName, ns, cancellationToken: token);
-                return (IReadOnlyDictionary<string, string>)ep.Annotations();
+                return (IReadOnlyDictionary<string, string>)ep.Annotations() ?? new Dictionary<string, string>();
             }
             catch (HttpOperationException e)
             {
                 if (e.Response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    return new Dictionary<string,string>();
+                    return new Dictionary<string, string>();
                 }
 
                 if (!string.IsNullOrEmpty(e.Response.Content))
@@ -63,6 +63,7 @@ namespace AutoCrane.Services
 
         public async Task PutLastKnownGoodAsync(string ns, IReadOnlyDictionary<string, string> annotationsToUpdate, CancellationToken token)
         {
+            V1Endpoints ep;
             try
             {
                 if (!this.config.IsAllowedNamespace(ns))
@@ -70,7 +71,32 @@ namespace AutoCrane.Services
                     throw new ForbiddenException($"namespace: {ns}");
                 }
 
-                var ep = await this.client.ReadNamespacedEndpointsAsync(AutoCraneLastKnownGoodEndpointName, ns, cancellationToken: token);
+                ep = await this.client.ReadNamespacedEndpointsAsync(AutoCraneLastKnownGoodEndpointName, ns, cancellationToken: token);
+            }
+            catch (HttpOperationException e)
+            {
+                if (e.Response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    var newEp = new V1Endpoints()
+                    {
+                        Metadata = new V1ObjectMeta()
+                        {
+                            NamespaceProperty = ns,
+                            Name = AutoCraneLastKnownGoodEndpointName,
+                        },
+                    };
+
+                    ep = await this.client.CreateNamespacedEndpointsAsync(newEp, ns, cancellationToken: token);
+                }
+                else
+                {
+                    this.logger.LogError($"Exception Getting LKG: {e.Response.Content}");
+                    throw;
+                }
+            }
+
+            try
+            {
                 var newannotations = new Dictionary<string, string>(ep.Annotations() ?? new Dictionary<string, string>());
                 foreach (var ann in annotationsToUpdate)
                 {
