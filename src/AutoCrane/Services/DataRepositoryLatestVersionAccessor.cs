@@ -31,11 +31,7 @@ namespace AutoCrane.Services
             foreach (var item in manifest.Sources)
             {
                 var mostRecentData = item.Value.ToList().OrderByDescending(k => k.Timestamp).First();
-                var req = new DataDownloadRequestDetails()
-                {
-                    Hash = mostRecentData.Hash,
-                    Path = mostRecentData.ArchiveFilePath,
-                };
+                var req = new DataDownloadRequestDetails(mostRecentData.ArchiveFilePath, mostRecentData.Hash);
 
                 var latestVersion = req.ToBase64String();
                 if (currentVer.TryGetValue(item.Key, out var currentVerString))

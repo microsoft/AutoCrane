@@ -34,11 +34,7 @@ namespace AutoCrane.Services
                 if (!lkg.ContainsKey(item.Key) && item.Value.Count > 0)
                 {
                     var mostRecentData = item.Value.ToList().OrderByDescending(k => k.Timestamp).First();
-                    var req = new DataDownloadRequestDetails()
-                    {
-                        Hash = mostRecentData.Hash,
-                        Path = mostRecentData.ArchiveFilePath,
-                    };
+                    var req = new DataDownloadRequestDetails(mostRecentData.ArchiveFilePath, mostRecentData.Hash);
 
                     this.logger.LogInformation($"Setting LKG for {item.Key} to hash={req.Hash} filePath={req.Path}");
                     itemsToAdd[item.Key] = req.ToBase64String();

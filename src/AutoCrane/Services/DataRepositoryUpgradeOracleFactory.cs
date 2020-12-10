@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Runtime.InteropServices;
 using AutoCrane.Interfaces;
 using AutoCrane.Models;
@@ -44,7 +45,7 @@ namespace AutoCrane.Services
                 this.clock = clock;
             }
 
-            public string? GetDataRequest(PodIdentifier pi, string repoName)
+            public DataDownloadRequestDetails? GetDataRequest(PodIdentifier pi, string repoName)
             {
                 var pod = this.pods.FirstOrDefault(p => p.Id == pi);
                 if (pod == null)
@@ -53,37 +54,62 @@ namespace AutoCrane.Services
                     return null;
                 }
 
-                if (pod.Requests.TryGetValue(repoName, out var existingVersion))
+                // there is no existing request
+                if (!pod.DataRepos.TryGetValue(repoName, out var repoSpec))
                 {
+                    // we can't even find the data source, bailout--this shouldn't happen
+                    this.logger.LogError($"Pod {pod.Id} has data request {repoName} but could not find data source.");
                     return null;
+                }
+
+                // try parsing the LKG and latest values
+                if (!this.knownGoods.KnownGoodVersions.TryGetValue(repoSpec, out var repoDetailsKnownGoodVersion))
+                {
+                    this.logger.LogError($"{repoName}/{repoSpec}: LKG missing, cannot set LKG");
+                    return null;
+                }
+
+                if (!this.latestVersionInfo.UpgradeInfo.TryGetValue(repoSpec, out var repoDetailsLatestVersion))
+                {
+                    this.logger.LogError($"{repoName}/{repoSpec}: latest version missing");
+                    return null;
+                }
+
+                var knownGoodVersion = DataDownloadRequestDetails.FromBase64Json(repoDetailsKnownGoodVersion);
+                if (knownGoodVersion is null)
+                {
+                    this.logger.LogError($"Cannot parse known good version of data {repoSpec}: {repoDetailsKnownGoodVersion}");
+                    return null;
+                }
+
+                var latestVersion = DataDownloadRequestDetails.FromBase64Json(repoDetailsLatestVersion);
+                if (latestVersion is null)
+                {
+                    this.logger.LogError($"Cannot parse known good version of data {repoSpec}: {repoDetailsLatestVersion}");
+                    return null;
+                }
+
+                if (pod.Requests.TryGetValue(repoName, out var existingVersionString))
+                {
+                    var existingVersion = DataDownloadRequestDetails.FromBase64Json(existingVersionString);
+                    if (existingVersion is null)
+                    {
+                        // if we can't parse the existing version, try setting it to LKG
+                        return knownGoodVersion;
+                    }
+
+                    if (existingVersion.Equals(latestVersion))
+                    {
+                        return null;
+                    }
+
+                    // unchecked upgrade logic
+                    return latestVersion;
                 }
                 else
                 {
-                    // there is no existing request
-                    if (!pod.DataRepos.TryGetValue(repoName, out var repoSpec))
-                    {
-                        // we can't even find the data source, bailout--this shouldn't happen
-                        this.logger.LogError($"Pod {pi} has data request {repoName} but could not find data source.");
-                        return null;
-                    }
-
-                    if (this.knownGoods.KnownGoodVersions.TryGetValue(repoSpec, out var repoDetails))
-                    {
-                        var knownGoodVersion = DataDownloadRequestDetails.FromBase64Json(repoDetails);
-                        if (knownGoodVersion is null)
-                        {
-                            this.logger.LogError($"Cannot parse known good version of data {repoSpec}: {repoDetails}");
-                            return null;
-                        }
-
-                        knownGoodVersion.UpdateTimestamp(this.clock);
-                        return knownGoodVersion.ToBase64String();
-                    }
-                    else
-                    {
-                        this.logger.LogError($"{repoName}/{repoSpec}: LKG missing, cannot set LKG");
-                        return null;
-                    }
+                    // doesn't have a request set, so default to LKG
+                    return knownGoodVersion;
                 }
             }
         }

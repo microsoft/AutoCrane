@@ -9,20 +9,26 @@ namespace AutoCrane.Models
 {
     public sealed class DataDownloadRequestDetails
     {
+        public DataDownloadRequestDetails(string path, string hash)
+        {
+            this.Path = path;
+            this.Hash = hash;
+        }
+
         /// <summary>
         /// The data repository host name.
         /// </summary>
-        public string? Path { get; set; }
+        public string? Path { get; }
 
         /// <summary>
         /// A hash of the contents of the archive.
         /// </summary>
-        public string? Hash { get; set; }
+        public string? Hash { get; }
 
         /// <summary>
         /// Number of seconds since the unix epoch.
         /// </summary>
-        public long? UnixTimestampSeconds { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        public long? UnixTimestampSeconds { get; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
         public static DataDownloadRequestDetails? FromBase64Json(string str)
         {
@@ -38,14 +44,22 @@ namespace AutoCrane.Models
             }
         }
 
+        public override bool Equals(object? obj)
+        {
+            return obj is DataDownloadRequestDetails details &&
+                   this.Path == details.Path &&
+                   this.Hash == details.Hash /*&&
+                   this.UnixTimestampSeconds == details.UnixTimestampSeconds*/;
+        }
+
         public string ToBase64String()
         {
             return Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(this));
         }
 
-        public void UpdateTimestamp(IClock clock)
+        public override string? ToString()
         {
-            this.UnixTimestampSeconds = clock.Get().ToUnixTimeSeconds();
+            return JsonSerializer.Serialize(this);
         }
     }
 }

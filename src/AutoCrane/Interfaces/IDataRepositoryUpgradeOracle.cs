@@ -7,6 +7,6 @@ namespace AutoCrane.Interfaces
 {
     public interface IDataRepositoryUpgradeOracle
     {
-        string? GetDataRequest(PodIdentifier pi, string repo);
+        DataDownloadRequestDetails? GetDataRequest(PodIdentifier pi, string repo);
     }
 }

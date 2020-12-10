@@ -133,7 +133,7 @@ namespace AutoCrane.Apps
                     if (newRequest != null)
                     {
                         this.logger.LogInformation($"Pod {podRequest.Id} to request {repoName} for data {repoSpec}, request = '{newRequest}'");
-                        annotationsToAdd.Add(new KeyValuePair<string, string>($"{CommonAnnotations.DataRequestPrefix}{repoName}", newRequest));
+                        annotationsToAdd.Add(new KeyValuePair<string, string>($"{CommonAnnotations.DataRequestPrefix}{repoName}", newRequest.ToBase64String()));
                     }
                     else
                     {

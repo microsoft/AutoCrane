@@ -21,20 +21,12 @@ namespace AutoCrane.Tests
             var f = new DataRepositoryUpgradeOracleFactory(new LoggerFactory(), fakeClock);
             var kg = new DataRepositoryKnownGoods(new Dictionary<string, string>()
             {
-                ["d"] = new DataDownloadRequestDetails()
-                {
-                    Hash = "a",
-                    Path = "a",
-                }.ToBase64String(),
+                ["d"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
             });
 
             var lv = new DataRepositoryLatestVersionInfo(new Dictionary<string, string>()
             {
-                ["d"] = new DataDownloadRequestDetails()
-                {
-                    Hash = "b",
-                    Path = "b",
-                }.ToBase64String(),
+                ["d"] = new DataDownloadRequestDetails("b", "b").ToBase64String(),
             });
 
             var pods = new List<PodDataRequestInfo>()
@@ -64,20 +56,12 @@ namespace AutoCrane.Tests
             var f = new DataRepositoryUpgradeOracleFactory(new LoggerFactory(), fakeClock);
             var kg = new DataRepositoryKnownGoods(new Dictionary<string, string>()
             {
-                ["d"] = new DataDownloadRequestDetails()
-                {
-                    Hash = "a",
-                    Path = "a",
-                }.ToBase64String(),
+                ["d"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
             });
 
             var lv = new DataRepositoryLatestVersionInfo(new Dictionary<string, string>()
             {
-                ["d"] = new DataDownloadRequestDetails()
-                {
-                    Hash = "a",
-                    Path = "a",
-                }.ToBase64String(),
+                ["d"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
             });
 
             var pods = new List<PodDataRequestInfo>()
@@ -107,20 +91,12 @@ namespace AutoCrane.Tests
             var f = new DataRepositoryUpgradeOracleFactory(new LoggerFactory(), fakeClock);
             var kg = new DataRepositoryKnownGoods(new Dictionary<string, string>()
             {
-                ["d"] = new DataDownloadRequestDetails()
-                {
-                    Hash = "a",
-                    Path = "a",
-                }.ToBase64String(),
+                ["d"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
             });
 
             var lv = new DataRepositoryLatestVersionInfo(new Dictionary<string, string>()
             {
-                ["d"] = new DataDownloadRequestDetails()
-                {
-                    Hash = "b",
-                    Path = "b",
-                }.ToBase64String(),
+                ["d"] = new DataDownloadRequestDetails("b", "b").ToBase64String(),
             });
 
             var pods = new List<PodDataRequestInfo>()
@@ -139,11 +115,15 @@ namespace AutoCrane.Tests
             AssertSameData(lv.UpgradeInfo["d"], o.GetDataRequest(pods[0].Id, "1"), $"With one pod, upgrade to latest if on LKG");
         }
 
-        private static void AssertSameData(string expected, string? actual, string msg)
+        private static void AssertSameData(string expected, DataDownloadRequestDetails? actual, string msg)
         {
             Assert.IsNotNull(actual);
             var expectedData = DataDownloadRequestDetails.FromBase64Json(expected);
-            var actualData = DataDownloadRequestDetails.FromBase64Json(actual!);
+            AssertSameData(expectedData, actual, msg);
+        }
+
+        private static void AssertSameData(DataDownloadRequestDetails? expectedData, DataDownloadRequestDetails? actualData, string msg)
+        {
             Assert.IsNotNull(expectedData);
             Assert.IsNotNull(actualData);
             Assert.AreEqual(expectedData!.Hash, actualData!.Hash, $"DataDownloadRequestDetails.Hash mismatch: {msg}");
