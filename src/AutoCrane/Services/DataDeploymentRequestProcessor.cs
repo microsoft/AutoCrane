@@ -100,10 +100,6 @@ namespace AutoCrane.Services
             {
                 await this.dataDownloader.DownloadAsync(request, token);
                 await this.dataLinker.LinkAsync(request.ExtractionLocation, Path.Combine(request.DataDropFolder, request.LocalName), token);
-
-                // is writing an annotation to indicate success too much access for a sidecar?
-                // var requestB64 = Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(request.Details));
-                // await this.annotationPutter.PutPodAnnotationAsync($"{CommonAnnotations.DataStatusPrefix}/{request.Name}", requestB64);
             }
 
             sw.Stop();

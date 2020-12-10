@@ -41,7 +41,7 @@ namespace AutoCrane.Services
                     };
 
                     this.logger.LogInformation($"Setting LKG for {item.Key} to hash={req.Hash} filePath={req.Path}");
-                    itemsToAdd[item.Key] = Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(req));
+                    itemsToAdd[item.Key] = req.ToBase64String();
                 }
             }
 

@@ -5,9 +5,9 @@ using System.Collections.Generic;
 
 namespace AutoCrane.Models
 {
-    public sealed class DataRepositoryUpgradeInfo
+    public sealed class DataRepositoryLatestVersionInfo
     {
-        public DataRepositoryUpgradeInfo(IReadOnlyDictionary<string, string> upgradeInfo)
+        public DataRepositoryLatestVersionInfo(IReadOnlyDictionary<string, string> upgradeInfo)
         {
             this.UpgradeInfo = upgradeInfo;
         }

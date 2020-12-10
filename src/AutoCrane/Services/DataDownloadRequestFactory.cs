@@ -52,8 +52,7 @@ namespace AutoCrane.Services
 
                 if (podInfo.Requests.TryGetValue(repo.Key, out var request))
                 {
-                    var utf8json = Convert.FromBase64String(request);
-                    var details = JsonSerializer.Deserialize<DataDownloadRequestDetails>(utf8json);
+                    var details = DataDownloadRequestDetails.FromBase64Json(request);
                     if (details is null || details.Hash is null || details.Path is null)
                     {
                         continue;

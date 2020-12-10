@@ -25,7 +25,7 @@ namespace AutoCrane.Tests
             var podRequestInfo = new PodDataRequestInfo(new PodIdentifier("a", "b"), dict);
             foreach (var reqName in activeRequests.Where(r => !string.IsNullOrEmpty(r)))
             {
-                Assert.IsTrue(podRequestInfo.NeedsRequest.Any(r => r == reqName));
+                Assert.IsFalse(podRequestInfo.Requests.Keys.Any(r => r == reqName));
             }
         }
     }

@@ -7,8 +7,8 @@ using AutoCrane.Models;
 
 namespace AutoCrane.Interfaces
 {
-    public interface IDataRepositoryUpgradeAccessor
+    public interface IDataRepositoryLatestVersionAccessor
     {
-        Task<DataRepositoryUpgradeInfo> GetOrUpdateAsync(string ns, DataRepositoryManifest manifest, CancellationToken token);
+        Task<DataRepositoryLatestVersionInfo> GetOrUpdateAsync(string ns, DataRepositoryManifest manifest, CancellationToken token);
     }
 }

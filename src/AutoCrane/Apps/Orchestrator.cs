@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoCrane.Interfaces;
@@ -25,9 +24,11 @@ namespace AutoCrane.Apps
         private readonly IDataRepositoryManifestFetcher manifestFetcher;
         private readonly IPodAnnotationPutter podAnnotationPutter;
         private readonly IDataRepositoryKnownGoodAccessor knownGoodAccessor;
+        private readonly IDataRepositoryLatestVersionAccessor upgradeAccessor;
+        private readonly IDataRepositoryUpgradeOracleFactory upgradeOracleFactory;
         private readonly ILogger<Orchestrator> logger;
 
-        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter, IPodDataRequestGetter podGetter, IDataRepositoryManifestFetcher manifestFetcher, IPodAnnotationPutter podAnnotationPutter, IDataRepositoryKnownGoodAccessor knownGoodAccessor)
+        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter, IPodDataRequestGetter podGetter, IDataRepositoryManifestFetcher manifestFetcher, IPodAnnotationPutter podAnnotationPutter, IDataRepositoryKnownGoodAccessor knownGoodAccessor, IDataRepositoryLatestVersionAccessor upgradeAccessor, IDataRepositoryUpgradeOracleFactory upgradeOracleFactory)
         {
             this.config = config;
             this.failingPodGetter = failingPodGetter;
@@ -36,6 +37,8 @@ namespace AutoCrane.Apps
             this.manifestFetcher = manifestFetcher;
             this.podAnnotationPutter = podAnnotationPutter;
             this.knownGoodAccessor = knownGoodAccessor;
+            this.upgradeAccessor = upgradeAccessor;
+            this.upgradeOracleFactory = upgradeOracleFactory;
             this.logger = loggerFactory.CreateLogger<Orchestrator>();
         }
 
@@ -68,14 +71,14 @@ namespace AutoCrane.Apps
                     var thisIterationFailingPods = new List<PodIdentifier>();
                     foreach (var ns in this.config.Namespaces)
                     {
-                        var lkg = await this.knownGoodAccessor.GetOrCreateAsync(ns, manifest, token);
+                        // this code gets the LKG versions, the latest versions, and all the existing pods, then creates an oracle to decide what to update (if any)
+                        var knownGoodVersions = await this.knownGoodAccessor.GetOrCreateAsync(ns, manifest, token);
+                        var latestVersions = await this.upgradeAccessor.GetOrUpdateAsync(ns, manifest, token);
                         var requests = await this.dataRequestGetter.GetAsync(ns);
-                        await this.ProcessDataRequestsAsync(lkg, requests);
+                        var oracle = this.upgradeOracleFactory.Create(knownGoodVersions, latestVersions, requests);
 
-                        if (lkg.OngoingUpdates.Any())
-                        {
-
-                        }
+                        // this updates the data request annotations based on what the oracle says. then the thing getting the data will pull the latest
+                        await this.ProcessDataRequestsAsync(oracle, requests);
 
                         var failingPods = await this.failingPodGetter.GetFailingPodsAsync(ns);
                         thisIterationFailingPods.AddRange(failingPods);
@@ -117,29 +120,27 @@ namespace AutoCrane.Apps
             return 0;
         }
 
-        private async Task ProcessDataRequestsAsync(DataRepositoryKnownGoods lkg, IReadOnlyList<PodDataRequestInfo> requests)
+        private async Task ProcessDataRequestsAsync(IDataRepositoryUpgradeOracle oracle, IReadOnlyList<PodDataRequestInfo> podRequests)
         {
-            foreach (var podRequest in requests.Where(r => r.NeedsRequest.Any()))
+            foreach (var podRequest in podRequests)
             {
                 var annotationsToAdd = new List<KeyValuePair<string, string>>();
-                foreach (var request in podRequest.NeedsRequest)
+                foreach (var repo in podRequest.DataRepos)
                 {
-                    if (podRequest.DataRepos.TryGetValue(request, out var dataRepoSpec))
+                    var repoName = repo.Key;
+                    var repoSpec = repo.Value;
+                    var existingRequest = podRequest.Requests.FirstOrDefault(k => k.Key == repoSpec);
+                    var existingRequestSpec = string.Empty;
+                    if (existingRequest.Key is not null && existingRequest.Value is not null)
                     {
-                        if (lkg.KnownGoodVersions.TryGetValue(dataRepoSpec, out var requestSpec))
-                        {
-                            this.logger.LogInformation($"Pod {podRequest.Id} requesting initial data {dataRepoSpec}, got LKG {requestSpec}");
-                            annotationsToAdd.Add(new KeyValuePair<string, string>($"{CommonAnnotations.DataRequestPrefix}{request}", requestSpec));
-                        }
-                        else
-                        {
-                            this.logger.LogError($"Pod {podRequest.Id} is requesting data repo {dataRepoSpec} which is not found in LKG sources: {string.Join(',', lkg.KnownGoodVersions.Keys)}");
-                        }
+                        // there is an existing request for this data, see if we can upgrade
+                        existingRequestSpec = DataDownloadRequestDetails.FromBase64Json(existingRequest.Value)?.Path ?? string.Empty;
                     }
-                    else
+
+                    if (oracle.ShouldMakeRequest(repoSpec, existingRequestSpec, out var newRequest))
                     {
-                        // set annotation?
-                        this.logger.LogError($"Pod {podRequest.Id} is missing annotation {CommonAnnotations.DataDeploymentPrefix}/{request}");
+                        this.logger.LogInformation($"Pod {podRequest.Id} to request data. From {existingRequestSpec} to {newRequest}");
+                        annotationsToAdd.Add(new KeyValuePair<string, string>($"{CommonAnnotations.DataRequestPrefix}{repoName}", newRequest));
                     }
                 }
 
@@ -148,17 +149,6 @@ namespace AutoCrane.Apps
                     await this.podAnnotationPutter.PutPodAnnotationAsync(podRequest.Id, annotationsToAdd);
                 }
             }
-        }
-
-        private async Task<IReadOnlyList<PodDataRequestInfo>> FetchDataRequestsAsync(IEnumerable<string> namespaces)
-        {
-            var list = new List<PodDataRequestInfo>();
-            foreach (var ns in namespaces)
-            {
-                list.AddRange(await this.dataRequestGetter.GetAsync(ns));
-            }
-
-            return list;
         }
 
         private Task EvictPods(HashSet<PodIdentifier> pods)

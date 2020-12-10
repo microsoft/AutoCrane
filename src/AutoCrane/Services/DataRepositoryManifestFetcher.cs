@@ -18,7 +18,7 @@ namespace AutoCrane.Services
         private readonly HttpClient client;
         private readonly IDataRepositoryManifestReaderFactory manifestReaderFactory;
 
-        public DataRepositoryManifestFetcher(ILoggerFactory loggerFactory, IOptions<DataRepoOptions> options, IDataRepositoryManifestReaderFactory manifestReaderFactory)
+        public DataRepositoryManifestFetcher(ILoggerFactory loggerFactory, IDataRepositoryManifestReaderFactory manifestReaderFactory)
         {
             this.logger = loggerFactory.CreateLogger<DataRepositoryManifestFetcher>();
             this.client = new HttpClient();
