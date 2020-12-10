@@ -12,7 +12,7 @@ namespace AutoCrane.Services
 {
     internal sealed class DataRepositoryUpgradeOracleFactory : IDataRepositoryUpgradeOracleFactory
     {
-        private static readonly TimeSpan UpgradeProbationTimeSpan = TimeSpan.FromMinutes(3);
+        private static readonly TimeSpan UpgradeProbationTimeSpan = TimeSpan.FromMinutes(10);
 
         private readonly ILogger<DataRepositoryUpgradeOracle> logger;
         private readonly IClock clock;
@@ -111,12 +111,30 @@ namespace AutoCrane.Services
                         return null;
                     }
 
+                    if (knownGoodVersion.Equals(latestVersion))
+                    {
+                        this.logger.LogInformation($"{pi} {repoName}/{repoSpec} LKG == latest, nothing to do.");
+                        return null;
+                    }
+
                     var existingVersionTimestamp = DateTimeOffset.FromUnixTimeSeconds(existingVersion.UnixTimestampSeconds.GetValueOrDefault());
                     if (existingVersionTimestamp > this.clock.Get() - UpgradeProbationTimeSpan)
                     {
                         this.logger.LogInformation($"{pi} {repoName}/{repoSpec} upgraded recently. ignoring");
                         return null;
                     }
+
+                    // we know we aren't on the latest version, if we aren't on LKG, upgrade to latest
+                    if (!existingVersion.Equals(knownGoodVersion))
+                    {
+                        this.logger.LogInformation($"{pi} {repoName}/{repoSpec} is on version between LKG and latest, moving to latest");
+                        return latestVersion;
+                    }
+
+                    // if FailingLimit% has been on latest version for at least UpgradeProbationTimeSpan, and there are no watchdog failures on dependent users, then
+                    // set LKG to latest, upgrade everyone to latest
+
+                    // otherwise put FailingLimit% on Latest and the rest on LKG
 
                     // unchecked upgrade logic
                     this.logger.LogInformation($"{pi} {repoName}/{repoSpec} unchecked upgrade logic. fixme: {latestVersion}");
