@@ -129,18 +129,15 @@ namespace AutoCrane.Apps
                 {
                     var repoName = repo.Key;
                     var repoSpec = repo.Value;
-                    var existingRequest = podRequest.Requests.FirstOrDefault(k => k.Key == repoSpec);
-                    var existingRequestSpec = string.Empty;
-                    if (existingRequest.Key is not null && existingRequest.Value is not null)
+                    var newRequest = oracle.GetDataRequest(podRequest.Id, repoName);
+                    if (newRequest != null)
                     {
-                        // there is an existing request for this data, see if we can upgrade
-                        existingRequestSpec = DataDownloadRequestDetails.FromBase64Json(existingRequest.Value)?.Path ?? string.Empty;
-                    }
-
-                    if (oracle.ShouldMakeRequest(repoSpec, existingRequestSpec, out var newRequest))
-                    {
-                        this.logger.LogInformation($"Pod {podRequest.Id} to request data. From {existingRequestSpec} to {newRequest}");
+                        this.logger.LogInformation($"Pod {podRequest.Id} to request {repoName} for data {repoSpec}, request = '{newRequest}'");
                         annotationsToAdd.Add(new KeyValuePair<string, string>($"{CommonAnnotations.DataRequestPrefix}{repoName}", newRequest));
+                    }
+                    else
+                    {
+                        this.logger.LogTrace($"Pod {podRequest.Id} no update for {repoName}/{repoSpec}.");
                     }
                 }
 

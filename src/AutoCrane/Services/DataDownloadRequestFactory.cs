@@ -55,6 +55,7 @@ namespace AutoCrane.Services
                     var details = DataDownloadRequestDetails.FromBase64Json(request);
                     if (details is null || details.Hash is null || details.Path is null)
                     {
+                        this.logger.LogError($"Cannot parse pod {podInfo.Id} DataDownloadRequestDetails {request}");
                         continue;
                     }
 

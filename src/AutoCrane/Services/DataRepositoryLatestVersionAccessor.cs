@@ -56,7 +56,13 @@ namespace AutoCrane.Services
                 await this.client.PutEndpointAnnotationsAsync(ns, AutoCraneDataDeployEndpointName, itemsToAdd, token);
             }
 
-            return new DataRepositoryLatestVersionInfo(currentVer.Union(itemsToAdd).ToDictionary(ks => ks.Key, vs => vs.Value));
+            var union = itemsToAdd;
+            foreach (var item in currentVer)
+            {
+                union.TryAdd(item.Key, item.Value);
+            }
+
+            return new DataRepositoryLatestVersionInfo(union);
         }
     }
 }

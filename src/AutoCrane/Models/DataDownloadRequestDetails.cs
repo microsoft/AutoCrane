@@ -22,13 +22,20 @@ namespace AutoCrane.Models
         /// <summary>
         /// Number of seconds since the unix epoch.
         /// </summary>
-        public long UnixTimestampSeconds { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        public long? UnixTimestampSeconds { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
         public static DataDownloadRequestDetails? FromBase64Json(string str)
         {
-            var utf8json = Convert.FromBase64String(str);
-            var details = JsonSerializer.Deserialize<DataDownloadRequestDetails>(utf8json);
-            return details;
+            try
+            {
+                var utf8json = Convert.FromBase64String(str);
+                var details = JsonSerializer.Deserialize<DataDownloadRequestDetails>(utf8json);
+                return details;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public string ToBase64String()

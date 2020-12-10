@@ -3,6 +3,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.InteropServices;
 using AutoCrane.Interfaces;
 using AutoCrane.Models;
 using Microsoft.Extensions.Logging;
@@ -42,25 +44,47 @@ namespace AutoCrane.Services
                 this.clock = clock;
             }
 
-            public bool ShouldMakeRequest(string repo, string existingVersion, out string newVersion)
+            public string? GetDataRequest(PodIdentifier pi, string repoName)
             {
-                newVersion = string.Empty;
-
-                // if there isn't an existing version, use the LKG version
-                if (string.IsNullOrEmpty(existingVersion))
+                var pod = this.pods.FirstOrDefault(p => p.Id == pi);
+                if (pod == null)
                 {
-                    var knownGoodVersion = DataDownloadRequestDetails.FromBase64Json(this.knownGoods.KnownGoodVersions[repo]);
-                    if (knownGoodVersion is null)
-                    {
-                        return false;
-                    }
-
-                    knownGoodVersion.UpdateTimestamp(this.clock);
-                    newVersion = knownGoodVersion.ToBase64String();
-                    return true;
+                    this.logger.LogError($"Cannot find pod {pi}, so cannot determine correct data request");
+                    return null;
                 }
 
-                return false;
+                if (pod.Requests.TryGetValue(repoName, out var existingVersion))
+                {
+                    return null;
+                }
+                else
+                {
+                    // there is no existing request
+                    if (!pod.DataRepos.TryGetValue(repoName, out var repoSpec))
+                    {
+                        // we can't even find the data source, bailout--this shouldn't happen
+                        this.logger.LogError($"Pod {pi} has data request {repoName} but could not find data source.");
+                        return null;
+                    }
+
+                    if (this.knownGoods.KnownGoodVersions.TryGetValue(repoSpec, out var repoDetails))
+                    {
+                        var knownGoodVersion = DataDownloadRequestDetails.FromBase64Json(repoDetails);
+                        if (knownGoodVersion is null)
+                        {
+                            this.logger.LogError($"Cannot parse known good version of data {repoSpec}: {repoDetails}");
+                            return null;
+                        }
+
+                        knownGoodVersion.UpdateTimestamp(this.clock);
+                        return knownGoodVersion.ToBase64String();
+                    }
+                    else
+                    {
+                        this.logger.LogError($"{repoName}/{repoSpec}: LKG missing, cannot set LKG");
+                        return null;
+                    }
+                }
             }
         }
     }

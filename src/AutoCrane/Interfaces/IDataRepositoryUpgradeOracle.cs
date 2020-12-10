@@ -1,10 +1,12 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+using AutoCrane.Models;
+
 namespace AutoCrane.Interfaces
 {
     public interface IDataRepositoryUpgradeOracle
     {
-        bool ShouldMakeRequest(string repo, string existingVersion, out string newVersion);
+        string? GetDataRequest(PodIdentifier pi, string repo);
     }
 }
