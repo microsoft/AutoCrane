@@ -12,6 +12,8 @@ namespace AutoCrane.Services
 {
     internal sealed class DataRepositoryUpgradeOracleFactory : IDataRepositoryUpgradeOracleFactory
     {
+        private static readonly TimeSpan UpgradeProbationTimeSpan = TimeSpan.FromMinutes(3);
+
         private readonly ILogger<DataRepositoryUpgradeOracle> logger;
         private readonly IClock clock;
 
@@ -63,27 +65,27 @@ namespace AutoCrane.Services
                 // try parsing the LKG and latest values
                 if (!this.knownGoods.KnownGoodVersions.TryGetValue(repoSpec, out var repoDetailsKnownGoodVersion))
                 {
-                    this.logger.LogError($"{repoName}/{repoSpec}: LKG missing, cannot set LKG");
+                    this.logger.LogError($"{pi} {repoName}/{repoSpec}: LKG missing, cannot set LKG");
                     return null;
                 }
 
                 if (!this.latestVersionInfo.UpgradeInfo.TryGetValue(repoSpec, out var repoDetailsLatestVersion))
                 {
-                    this.logger.LogError($"{repoName}/{repoSpec}: latest version missing");
+                    this.logger.LogError($"{pi} {repoName}/{repoSpec}: latest version missing");
                     return null;
                 }
 
                 var knownGoodVersion = DataDownloadRequestDetails.FromBase64Json(repoDetailsKnownGoodVersion);
                 if (knownGoodVersion is null)
                 {
-                    this.logger.LogError($"Cannot parse known good version of data {repoSpec}: {repoDetailsKnownGoodVersion}");
+                    this.logger.LogError($"{pi} Cannot parse known good version of data {repoSpec}: {repoDetailsKnownGoodVersion}");
                     return null;
                 }
 
                 var latestVersion = DataDownloadRequestDetails.FromBase64Json(repoDetailsLatestVersion);
                 if (latestVersion is null)
                 {
-                    this.logger.LogError($"Cannot parse known good version of data {repoSpec}: {repoDetailsLatestVersion}");
+                    this.logger.LogError($"{pi} Cannot parse known good version of data {repoSpec}: {repoDetailsLatestVersion}");
                     return null;
                 }
 
@@ -93,20 +95,37 @@ namespace AutoCrane.Services
                     if (existingVersion is null)
                     {
                         // if we can't parse the existing version, try setting it to LKG
+                        this.logger.LogError($"{pi} Cannot parse existing version {existingVersionString}, setting to LKG: {knownGoodVersion}");
+                        return knownGoodVersion;
+                    }
+
+                    if (existingVersion.UnixTimestampSeconds is null)
+                    {
+                        this.logger.LogError($"{pi} Existing version {existingVersionString}, does not have timestamp, returning LKG: {knownGoodVersion}");
                         return knownGoodVersion;
                     }
 
                     if (existingVersion.Equals(latestVersion))
                     {
+                        this.logger.LogInformation($"{pi} {repoName}/{repoSpec} is on latest version, doing nothing.");
+                        return null;
+                    }
+
+                    var existingVersionTimestamp = DateTimeOffset.FromUnixTimeSeconds(existingVersion.UnixTimestampSeconds.GetValueOrDefault());
+                    if (existingVersionTimestamp > this.clock.Get() - UpgradeProbationTimeSpan)
+                    {
+                        this.logger.LogInformation($"{pi} {repoName}/{repoSpec} upgraded recently. ignoring");
                         return null;
                     }
 
                     // unchecked upgrade logic
+                    this.logger.LogInformation($"{pi} {repoName}/{repoSpec} unchecked upgrade logic. fixme: {latestVersion}");
                     return latestVersion;
                 }
                 else
                 {
                     // doesn't have a request set, so default to LKG
+                    this.logger.LogInformation($"{pi} {repoName}/{repoSpec} has no request, setting to LKG: {knownGoodVersion}");
                     return knownGoodVersion;
                 }
             }

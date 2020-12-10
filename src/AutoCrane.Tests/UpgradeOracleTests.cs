@@ -81,11 +81,46 @@ namespace AutoCrane.Tests
         }
 
         [TestMethod]
+        public void TestDataRequestRecentUpgrade()
+        {
+            var fakeClock = new ManualClock()
+            {
+                Time = DateTimeOffset.UtcNow,
+            };
+
+            var f = new DataRepositoryUpgradeOracleFactory(new LoggerFactory(), fakeClock);
+            var kg = new DataRepositoryKnownGoods(new Dictionary<string, string>()
+            {
+                ["d"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
+            });
+
+            var lv = new DataRepositoryLatestVersionInfo(new Dictionary<string, string>()
+            {
+                ["d"] = new DataDownloadRequestDetails("b", "b").ToBase64String(),
+            });
+
+            var pods = new List<PodDataRequestInfo>()
+            {
+                new PodDataRequestInfo(
+                    new PodIdentifier("ns", "name"),
+                    new Dictionary<string, string>()
+                    {
+                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d",
+                        [$"{CommonAnnotations.DataRequestPrefix}1"] = kg.KnownGoodVersions["d"],
+                    }),
+            };
+
+            var o = f.Create(kg, lv, pods);
+
+            Assert.IsNull(o.GetDataRequest(pods[0].Id, "1"), $"Should not give a new request because still in probation");
+        }
+
+        [TestMethod]
         public void TestDataRequestOnePodUpgrade()
         {
             var fakeClock = new ManualClock()
             {
-                Time = DateTimeOffset.FromUnixTimeSeconds(1_000),
+                Time = DateTimeOffset.UtcNow + TimeSpan.FromDays(1),
             };
 
             var f = new DataRepositoryUpgradeOracleFactory(new LoggerFactory(), fakeClock);

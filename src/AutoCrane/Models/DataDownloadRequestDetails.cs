@@ -28,7 +28,7 @@ namespace AutoCrane.Models
         /// <summary>
         /// Number of seconds since the unix epoch.
         /// </summary>
-        public long? UnixTimestampSeconds { get; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        public long? UnixTimestampSeconds { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
         public static DataDownloadRequestDetails? FromBase64Json(string str)
         {
@@ -50,6 +50,11 @@ namespace AutoCrane.Models
                    this.Path == details.Path &&
                    this.Hash == details.Hash /*&&
                    this.UnixTimestampSeconds == details.UnixTimestampSeconds*/;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(this.Path, this.Hash, this.UnixTimestampSeconds);
         }
 
         public string ToBase64String()

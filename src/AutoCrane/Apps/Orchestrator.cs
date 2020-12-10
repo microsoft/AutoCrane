@@ -26,9 +26,10 @@ namespace AutoCrane.Apps
         private readonly IDataRepositoryKnownGoodAccessor knownGoodAccessor;
         private readonly IDataRepositoryLatestVersionAccessor upgradeAccessor;
         private readonly IDataRepositoryUpgradeOracleFactory upgradeOracleFactory;
+        private readonly IClock clock;
         private readonly ILogger<Orchestrator> logger;
 
-        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter, IPodDataRequestGetter podGetter, IDataRepositoryManifestFetcher manifestFetcher, IPodAnnotationPutter podAnnotationPutter, IDataRepositoryKnownGoodAccessor knownGoodAccessor, IDataRepositoryLatestVersionAccessor upgradeAccessor, IDataRepositoryUpgradeOracleFactory upgradeOracleFactory)
+        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter, IPodDataRequestGetter podGetter, IDataRepositoryManifestFetcher manifestFetcher, IPodAnnotationPutter podAnnotationPutter, IDataRepositoryKnownGoodAccessor knownGoodAccessor, IDataRepositoryLatestVersionAccessor upgradeAccessor, IDataRepositoryUpgradeOracleFactory upgradeOracleFactory, IClock clock)
         {
             this.config = config;
             this.failingPodGetter = failingPodGetter;
@@ -39,6 +40,7 @@ namespace AutoCrane.Apps
             this.knownGoodAccessor = knownGoodAccessor;
             this.upgradeAccessor = upgradeAccessor;
             this.upgradeOracleFactory = upgradeOracleFactory;
+            this.clock = clock;
             this.logger = loggerFactory.CreateLogger<Orchestrator>();
         }
 
@@ -132,6 +134,7 @@ namespace AutoCrane.Apps
                     var newRequest = oracle.GetDataRequest(podRequest.Id, repoName);
                     if (newRequest != null)
                     {
+                        newRequest.UnixTimestampSeconds = this.clock.Get().ToUnixTimeSeconds();
                         this.logger.LogInformation($"Pod {podRequest.Id} to request {repoName} for data {repoSpec}, request = '{newRequest}'");
                         annotationsToAdd.Add(new KeyValuePair<string, string>($"{CommonAnnotations.DataRequestPrefix}{repoName}", newRequest.ToBase64String()));
                     }
