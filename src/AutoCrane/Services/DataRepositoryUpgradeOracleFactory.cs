@@ -4,8 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Runtime.InteropServices;
 using AutoCrane.Interfaces;
 using AutoCrane.Models;
 using Microsoft.Extensions.Logging;
