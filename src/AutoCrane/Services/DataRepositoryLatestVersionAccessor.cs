@@ -14,7 +14,7 @@ namespace AutoCrane.Services
 {
     internal sealed class DataRepositoryLatestVersionAccessor : IDataRepositoryLatestVersionAccessor
     {
-        private const string AutoCraneDataDeployEndpointName = "autocranedatadeploy";
+        private const string AutoCraneDataDeployEndpointName = "autocranelatest";
         private readonly ILogger<DataRepositoryLatestVersionAccessor> logger;
         private readonly KubernetesClient client;
 
