@@ -53,7 +53,8 @@ namespace AutoCrane.Services
                     .ToList();
 
                 var distinctRequestsForThisSource = requestsForThisSource.Select(r => r?.Path).Distinct().ToList();
-                if (distinctRequestsForThisSource.Count == 1)
+                var firstRequestForThisSource = requestsForThisSource.FirstOrDefault();
+                if (distinctRequestsForThisSource.Count == 1 && firstRequestForThisSource != null)
                 {
                     var everyPodHasThisPath = distinctRequestsForThisSource.First();
                     var currentVersion = DataDownloadRequestDetails.FromBase64Json(currentVersionString);
@@ -65,9 +66,8 @@ namespace AutoCrane.Services
                     {
                         if (currentVersion.Path != everyPodHasThisPath)
                         {
-                            var req = requestsForThisSource.First(r => r != null);
-                            this.logger.LogInformation($"Upgrading LKG for {dataSource} to hash={req!.Hash} filePath={req!.Path}");
-                            itemsToAdd[dataSource] = req.ToBase64String();
+                            this.logger.LogInformation($"Upgrading LKG for {dataSource} to hash={firstRequestForThisSource!.Hash} filePath={firstRequestForThisSource!.Path}");
+                            itemsToAdd[dataSource] = firstRequestForThisSource.ToBase64String();
                         }
                     }
                 }

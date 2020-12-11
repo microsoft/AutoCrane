@@ -43,7 +43,7 @@ namespace AutoCrane.Services
                 this.logger.LogInformation($"Getting data requests...");
                 requests = await this.downloadRequestFactory.GetPodRequestsAsync();
 
-                this.logger.LogInformation($"We have {requests.Count} data requests... {requests.Where(r => r.Details is null).Count()} where details are set.");
+                this.logger.LogInformation($"Requests served: {requests.Where(r => r.Details is not null).Count()}/{requests.Count}...");
                 await Task.Delay(TimeSpan.FromSeconds(GetRequestLoopSeconds), token);
                 token.ThrowIfCancellationRequested();
                 loopCount++;
