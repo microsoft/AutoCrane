@@ -9,7 +9,7 @@ namespace AutoCrane.Services
 {
     internal sealed class WatchdogStatusAggregator : IWatchdogStatusAggregator
     {
-        public string Aggregate(IDictionary<string, string> annotations)
+        public string Aggregate(IReadOnlyDictionary<string, string> annotations)
         {
             var maxStatus = "Unknown";
             foreach (var annotation in annotations)

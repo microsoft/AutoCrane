@@ -18,7 +18,7 @@ namespace AutoCrane.Tests
                 Time = DateTimeOffset.FromUnixTimeSeconds(1_000),
             };
 
-            var f = new DataRepositoryUpgradeOracleFactory(new LoggerFactory(), fakeClock);
+            var f = new DataRepositoryUpgradeOracleFactory(new LoggerFactory(), fakeClock, new WatchdogStatusAggregator());
             var kg = new DataRepositoryKnownGoods(new Dictionary<string, string>()
             {
                 ["d"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
@@ -53,7 +53,7 @@ namespace AutoCrane.Tests
                 Time = DateTimeOffset.FromUnixTimeSeconds(1_000),
             };
 
-            var f = new DataRepositoryUpgradeOracleFactory(new LoggerFactory(), fakeClock);
+            var f = new DataRepositoryUpgradeOracleFactory(new LoggerFactory(), fakeClock, new WatchdogStatusAggregator());
             var kg = new DataRepositoryKnownGoods(new Dictionary<string, string>()
             {
                 ["d"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
@@ -88,7 +88,7 @@ namespace AutoCrane.Tests
                 Time = DateTimeOffset.UtcNow,
             };
 
-            var f = new DataRepositoryUpgradeOracleFactory(new LoggerFactory(), fakeClock);
+            var f = new DataRepositoryUpgradeOracleFactory(new LoggerFactory(), fakeClock, new WatchdogStatusAggregator());
             var kg = new DataRepositoryKnownGoods(new Dictionary<string, string>()
             {
                 ["d"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
@@ -123,7 +123,7 @@ namespace AutoCrane.Tests
                 Time = DateTimeOffset.UtcNow + TimeSpan.FromDays(1),
             };
 
-            var f = new DataRepositoryUpgradeOracleFactory(new LoggerFactory(), fakeClock);
+            var f = new DataRepositoryUpgradeOracleFactory(new LoggerFactory(), fakeClock, new WatchdogStatusAggregator());
             var kg = new DataRepositoryKnownGoods(new Dictionary<string, string>()
             {
                 ["d"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
