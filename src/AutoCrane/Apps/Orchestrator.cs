@@ -74,9 +74,9 @@ namespace AutoCrane.Apps
                     foreach (var ns in this.config.Namespaces)
                     {
                         // this code gets the LKG versions, the latest versions, and all the existing pods, then creates an oracle to decide what to update (if any)
-                        var knownGoodVersions = await this.knownGoodAccessor.GetOrCreateAsync(ns, manifest, token);
-                        var latestVersions = await this.upgradeAccessor.GetOrUpdateAsync(ns, manifest, token);
                         var requests = await this.dataRequestGetter.GetAsync(ns);
+                        var knownGoodVersions = await this.knownGoodAccessor.GetOrUpdateAsync(ns, manifest, requests, token);
+                        var latestVersions = await this.upgradeAccessor.GetOrUpdateAsync(ns, manifest, token);
                         var oracle = this.upgradeOracleFactory.Create(knownGoodVersions, latestVersions, requests);
 
                         // this updates the data request annotations based on what the oracle says. then the thing getting the data will pull the latest
@@ -127,20 +127,18 @@ namespace AutoCrane.Apps
             foreach (var podRequest in podRequests)
             {
                 var annotationsToAdd = new List<KeyValuePair<string, string>>();
-                foreach (var repo in podRequest.DataRepos)
+                foreach (var repoName in podRequest.DataSources)
                 {
-                    var repoName = repo.Key;
-                    var repoSpec = repo.Value;
                     var newRequest = oracle.GetDataRequest(podRequest.Id, repoName);
                     if (newRequest != null)
                     {
                         newRequest.UnixTimestampSeconds = this.clock.Get().ToUnixTimeSeconds();
-                        this.logger.LogInformation($"Pod {podRequest.Id} to request {repoName} for data {repoSpec}, request = '{newRequest}'");
+                        this.logger.LogInformation($"Pod {podRequest.Id} to request data {repoName}, request = '{newRequest}'");
                         annotationsToAdd.Add(new KeyValuePair<string, string>($"{CommonAnnotations.DataRequestPrefix}{repoName}", newRequest.ToBase64String()));
                     }
                     else
                     {
-                        this.logger.LogTrace($"Pod {podRequest.Id} no update for {repoName}/{repoSpec}.");
+                        this.logger.LogTrace($"Pod {podRequest.Id} no update for data {repoName}.");
                     }
                 }
 

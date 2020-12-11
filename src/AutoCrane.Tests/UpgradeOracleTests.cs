@@ -35,14 +35,14 @@ namespace AutoCrane.Tests
                     new PodIdentifier("ns", "name"),
                     new Dictionary<string, string>()
                     {
-                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d"
+                        [$"{CommonAnnotations.DataSources}"] = "d"
                     }),
             };
 
             var o = f.Create(kg, lv, pods);
 
             Assert.IsNull(o.GetDataRequest(pods[0].Id, "0"), "Request to non-existing repo should not return a request");
-            AssertSameData(kg.KnownGoodVersions["d"], o.GetDataRequest(pods[0].Id, "1"), $"Initial request should be LKG");
+            AssertSameData(kg.KnownGoodVersions["d"], o.GetDataRequest(pods[0].Id, "d"), $"Initial request should be LKG");
         }
 
         [TestMethod]
@@ -70,14 +70,14 @@ namespace AutoCrane.Tests
                     new PodIdentifier("ns", "name"),
                     new Dictionary<string, string>()
                     {
-                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d",
-                        [$"{CommonAnnotations.DataRequestPrefix}1"] = kg.KnownGoodVersions["d"],
+                        [$"{CommonAnnotations.DataSources}"] = "d",
+                        [$"{CommonAnnotations.DataRequestPrefix}d"] = kg.KnownGoodVersions["d"],
                     }),
             };
 
             var o = f.Create(kg, lv, pods);
 
-            Assert.IsNull(o.GetDataRequest(pods[0].Id, "1"), "Request should return nothing if upgrade would be same as LKG");
+            Assert.IsNull(o.GetDataRequest(pods[0].Id, "d"), "Request should return nothing if upgrade would be same as LKG");
         }
 
         [TestMethod]
@@ -105,14 +105,14 @@ namespace AutoCrane.Tests
                     new PodIdentifier("ns", "name"),
                     new Dictionary<string, string>()
                     {
-                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d",
-                        [$"{CommonAnnotations.DataRequestPrefix}1"] = kg.KnownGoodVersions["d"],
+                        [$"{CommonAnnotations.DataSources}"] = "d",
+                        [$"{CommonAnnotations.DataRequestPrefix}d"] = kg.KnownGoodVersions["d"],
                     }),
             };
 
             var o = f.Create(kg, lv, pods);
 
-            Assert.IsNull(o.GetDataRequest(pods[0].Id, "1"), $"Should not give a new request because still in probation");
+            Assert.IsNull(o.GetDataRequest(pods[0].Id, "d"), $"Should not give a new request because still in probation");
         }
 
         [TestMethod]
@@ -140,14 +140,14 @@ namespace AutoCrane.Tests
                     new PodIdentifier("ns", "name"),
                     new Dictionary<string, string>()
                     {
-                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d",
-                        [$"{CommonAnnotations.DataRequestPrefix}1"] = kg.KnownGoodVersions["d"],
+                        [$"{CommonAnnotations.DataSources}"] = "d",
+                        [$"{CommonAnnotations.DataRequestPrefix}d"] = kg.KnownGoodVersions["d"],
                     }),
             };
 
             var o = f.Create(kg, lv, pods);
 
-            AssertSameData(lv.UpgradeInfo["d"], o.GetDataRequest(pods[0].Id, "1"), $"With one pod, upgrade to latest if on LKG");
+            AssertSameData(lv.UpgradeInfo["d"], o.GetDataRequest(pods[0].Id, "d"), $"With one pod, upgrade to latest if on LKG");
         }
 
         [TestMethod]
@@ -175,14 +175,14 @@ namespace AutoCrane.Tests
                     new PodIdentifier("ns", "name"),
                     new Dictionary<string, string>()
                     {
-                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d",
-                        [$"{CommonAnnotations.DataRequestPrefix}1"] = "unparsable",
+                        [$"{CommonAnnotations.DataSources}"] = "d",
+                        [$"{CommonAnnotations.DataRequestPrefix}d"] = "unparsable",
                     }),
             };
 
             var o = f.Create(kg, lv, pods);
 
-            AssertSameData(kg.KnownGoodVersions["d"], o.GetDataRequest(pods[0].Id, "1"), $"Reset to LKG on Parse error");
+            AssertSameData(kg.KnownGoodVersions["d"], o.GetDataRequest(pods[0].Id, "d"), $"Reset to LKG on Parse error");
         }
 
         [TestMethod]
@@ -204,8 +204,10 @@ namespace AutoCrane.Tests
                 ["d"] = new DataDownloadRequestDetails("b", "b").ToBase64String(),
             });
 
-            var badReq = new DataDownloadRequestDetails("b", "b");
-            badReq.UnixTimestampSeconds = null;
+            var badReq = new DataDownloadRequestDetails("b", "b")
+            {
+                UnixTimestampSeconds = null
+            };
 
             var pods = new List<PodDataRequestInfo>()
             {
@@ -213,14 +215,14 @@ namespace AutoCrane.Tests
                     new PodIdentifier("ns", "name"),
                     new Dictionary<string, string>()
                     {
-                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d",
-                        [$"{CommonAnnotations.DataRequestPrefix}1"] = badReq.ToBase64String(),
+                        [$"{CommonAnnotations.DataSources}"] = "d",
+                        [$"{CommonAnnotations.DataRequestPrefix}d"] = badReq.ToBase64String(),
                     }),
             };
 
             var o = f.Create(kg, lv, pods);
 
-            AssertSameData(kg.KnownGoodVersions["d"], o.GetDataRequest(pods[0].Id, "1"), $"Reset to LKG on bad timestamp");
+            AssertSameData(kg.KnownGoodVersions["d"], o.GetDataRequest(pods[0].Id, "d"), $"Reset to LKG on bad timestamp");
         }
 
 
@@ -251,14 +253,14 @@ namespace AutoCrane.Tests
                     new PodIdentifier("ns", "name"),
                     new Dictionary<string, string>()
                     {
-                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d",
-                        [$"{CommonAnnotations.DataRequestPrefix}1"] = middle.ToBase64String(),
+                        [$"{CommonAnnotations.DataSources}"] = "d",
+                        [$"{CommonAnnotations.DataRequestPrefix}d"] = middle.ToBase64String(),
                     }),
             };
 
             var o = f.Create(kg, lv, pods);
 
-            AssertSameData(lv.UpgradeInfo["d"], o.GetDataRequest(pods[0].Id, "1"), "upgrade to latest");
+            AssertSameData(lv.UpgradeInfo["d"], o.GetDataRequest(pods[0].Id, "d"), "upgrade to latest");
         }
 
         [TestMethod]
@@ -285,14 +287,14 @@ namespace AutoCrane.Tests
                     new PodIdentifier("ns", "name"),
                     new Dictionary<string, string>()
                     {
-                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d",
-                        [$"{CommonAnnotations.DataRequestPrefix}1"] = lv.UpgradeInfo["d"],
+                        [$"{CommonAnnotations.DataSources}"] = "d",
+                        [$"{CommonAnnotations.DataRequestPrefix}d"] = lv.UpgradeInfo["d"],
                     }),
             };
 
             var o = f.Create(kg, lv, pods);
 
-            Assert.IsNull(o.GetDataRequest(pods[0].Id, "1"));
+            Assert.IsNull(o.GetDataRequest(pods[0].Id, "d"));
         }
 
         [TestMethod]
@@ -319,14 +321,14 @@ namespace AutoCrane.Tests
                     new PodIdentifier("ns", "name"),
                     new Dictionary<string, string>()
                     {
-                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d",
-                        [$"{CommonAnnotations.DataRequestPrefix}1"] = kg.KnownGoodVersions["d"],
+                        [$"{CommonAnnotations.DataSources}"] = "d",
+                        [$"{CommonAnnotations.DataRequestPrefix}d"] = kg.KnownGoodVersions["d"],
                     }),
             };
 
             var o = f.Create(kg, lv, pods);
 
-            Assert.IsNull(o.GetDataRequest(pods[0].Id, "1"));
+            Assert.IsNull(o.GetDataRequest(pods[0].Id, "d"));
         }
 
 
@@ -355,22 +357,22 @@ namespace AutoCrane.Tests
                     new PodIdentifier("ns", "pod1"),
                     new Dictionary<string, string>()
                     {
-                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d",
-                        [$"{CommonAnnotations.DataRequestPrefix}1"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
+                        [$"{CommonAnnotations.DataSources}"] = "d",
+                        [$"{CommonAnnotations.DataRequestPrefix}d"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
                     }),
                 new PodDataRequestInfo(
                     new PodIdentifier("ns", "pod2"),
                     new Dictionary<string, string>()
                     {
-                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d",
-                        [$"{CommonAnnotations.DataRequestPrefix}1"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
+                        [$"{CommonAnnotations.DataSources}"] = "d",
+                        [$"{CommonAnnotations.DataRequestPrefix}d"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
                     }),
                 new PodDataRequestInfo(
                     new PodIdentifier("ns", "pod3"),
                     new Dictionary<string, string>()
                     {
-                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d",
-                        [$"{CommonAnnotations.DataRequestPrefix}1"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
+                        [$"{CommonAnnotations.DataSources}"] = "d",
+                        [$"{CommonAnnotations.DataRequestPrefix}d"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
                     }),
                 new PodDataRequestInfo(
                     new PodIdentifier("ns", "pod4"),
@@ -385,9 +387,9 @@ namespace AutoCrane.Tests
             var o = f.Create(kg, lv, pods);
 
 
-            Assert.IsNull(o.GetDataRequest(pods[0].Id, "1"), "watchdog failure on pod 4");
-            Assert.IsNull(o.GetDataRequest(pods[1].Id, "1"), "watchdog failure on pod 4");
-            Assert.IsNull(o.GetDataRequest(pods[2].Id, "1"), "watchdog failure on pod 4");
+            Assert.IsNull(o.GetDataRequest(pods[0].Id, "d"), "watchdog failure on pod 4");
+            Assert.IsNull(o.GetDataRequest(pods[1].Id, "d"), "watchdog failure on pod 4");
+            Assert.IsNull(o.GetDataRequest(pods[2].Id, "d"), "watchdog failure on pod 4");
         }
 
 
@@ -416,31 +418,31 @@ namespace AutoCrane.Tests
                     new PodIdentifier("ns", "pod1"),
                     new Dictionary<string, string>()
                     {
-                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d",
-                        [$"{CommonAnnotations.DataRequestPrefix}1"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
+                        [$"{CommonAnnotations.DataSources}"] = "d",
+                        [$"{CommonAnnotations.DataRequestPrefix}d"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
                     }),
                 new PodDataRequestInfo(
                     new PodIdentifier("ns", "pod2"),
                     new Dictionary<string, string>()
                     {
-                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d",
-                        [$"{CommonAnnotations.DataRequestPrefix}1"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
+                        [$"{CommonAnnotations.DataSources}"] = "d",
+                        [$"{CommonAnnotations.DataRequestPrefix}d"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
                     }),
                 new PodDataRequestInfo(
                     new PodIdentifier("ns", "pod3"),
                     new Dictionary<string, string>()
                     {
-                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d",
-                        [$"{CommonAnnotations.DataRequestPrefix}1"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
+                        [$"{CommonAnnotations.DataSources}"] = "d",
+                        [$"{CommonAnnotations.DataRequestPrefix}d"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
                     }),
             };
 
             var o = f.Create(kg, lv, pods);
 
             // upgrade 1 to latest
-            var pod1 = o.GetDataRequest(pods[0].Id, "1");
-            var pod2 = o.GetDataRequest(pods[1].Id, "1");
-            var pod3 = o.GetDataRequest(pods[2].Id, "1");
+            var pod1 = o.GetDataRequest(pods[0].Id, "d");
+            var pod2 = o.GetDataRequest(pods[1].Id, "d");
+            var pod3 = o.GetDataRequest(pods[2].Id, "d");
             Assert.IsNull(pod1, "pod should not upgrade");
             Assert.IsNull(pod2, "pod should not upgrade");
             AssertSameData(lv.UpgradeInfo["d"], pod3, "upgrade to latest");
@@ -471,31 +473,31 @@ namespace AutoCrane.Tests
                     new PodIdentifier("ns", "pod1"),
                     new Dictionary<string, string>()
                     {
-                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d",
-                        [$"{CommonAnnotations.DataRequestPrefix}1"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
+                        [$"{CommonAnnotations.DataSources}"] = "d",
+                        [$"{CommonAnnotations.DataRequestPrefix}d"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
                     }),
                 new PodDataRequestInfo(
                     new PodIdentifier("ns", "pod2"),
                     new Dictionary<string, string>()
                     {
-                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d",
-                        [$"{CommonAnnotations.DataRequestPrefix}1"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
+                        [$"{CommonAnnotations.DataSources}"] = "d",
+                        [$"{CommonAnnotations.DataRequestPrefix}d"] = new DataDownloadRequestDetails("a", "a").ToBase64String(),
                     }),
                 new PodDataRequestInfo(
                     new PodIdentifier("ns", "pod3"),
                     new Dictionary<string, string>()
                     {
-                        [$"{CommonAnnotations.DataDeploymentPrefix}1"] = "d",
-                        [$"{CommonAnnotations.DataRequestPrefix}1"] = new DataDownloadRequestDetails("b", "b").ToBase64String(),
+                        [$"{CommonAnnotations.DataSources}"] = "d",
+                        [$"{CommonAnnotations.DataRequestPrefix}d"] = new DataDownloadRequestDetails("b", "b").ToBase64String(),
                     }),
             };
 
             var o = f.Create(kg, lv, pods);
 
             // upgrade 1 to latest
-            var pod1 = o.GetDataRequest(pods[0].Id, "1");
-            var pod2 = o.GetDataRequest(pods[1].Id, "1");
-            var pod3 = o.GetDataRequest(pods[2].Id, "1");
+            var pod1 = o.GetDataRequest(pods[0].Id, "d");
+            var pod2 = o.GetDataRequest(pods[1].Id, "d");
+            var pod3 = o.GetDataRequest(pods[2].Id, "d");
             AssertSameData(lv.UpgradeInfo["d"], pod1, "upgrade to latest");
             AssertSameData(lv.UpgradeInfo["d"], pod2, "upgrade to latest");
             Assert.IsNull(pod3, "pod already on latest");

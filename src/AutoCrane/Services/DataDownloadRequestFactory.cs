@@ -43,14 +43,9 @@ namespace AutoCrane.Services
                 return list;
             }
 
-            foreach (var repo in podInfo.DataRepos)
+            foreach (var repo in podInfo.DataSources)
             {
-                if (repo.Key is null || repo.Value is null)
-                {
-                    continue;
-                }
-
-                if (podInfo.Requests.TryGetValue(repo.Key, out var request))
+                if (podInfo.Requests.TryGetValue(repo, out var request))
                 {
                     var details = DataDownloadRequestDetails.FromBase64Json(request);
                     if (details is null || details.Hash is null || details.Path is null)
@@ -60,11 +55,11 @@ namespace AutoCrane.Services
                     }
 
                     var extractionLocation = Path.Combine(podInfo.DropFolder, details.Path.Replace(Path.PathSeparator, '_'));
-                    list.Add(new DataDownloadRequest(pod, repo.Key, repo.Value, podInfo.DropFolder, extractionLocation, details));
+                    list.Add(new DataDownloadRequest(pod, repo, podInfo.DropFolder, extractionLocation, details));
                 }
                 else
                 {
-                    list.Add(new DataDownloadRequest(pod, repo.Key, repo.Value, podInfo.DropFolder, string.Empty, null));
+                    list.Add(new DataDownloadRequest(pod, repo, podInfo.DropFolder, string.Empty, null));
                 }
             }
 

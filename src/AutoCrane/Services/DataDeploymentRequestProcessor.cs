@@ -99,7 +99,7 @@ namespace AutoCrane.Services
             foreach (var request in requests)
             {
                 await this.dataDownloader.DownloadAsync(request, token);
-                await this.dataLinker.LinkAsync(request.ExtractionLocation, Path.Combine(request.DataDropFolder, request.LocalName), token);
+                await this.dataLinker.LinkAsync(request.ExtractionLocation, Path.Combine(request.DataDropFolder, request.DataSource), token);
             }
 
             sw.Stop();

@@ -55,9 +55,8 @@ namespace AutoCrane.Services
                 this.podsWithRepo = new Dictionary<string, List<PodDataRequestInfo>>();
                 foreach (var pod in pods)
                 {
-                    foreach (var repo in pod.DataRepos)
+                    foreach (var repoSpec in pod.DataSources)
                     {
-                        var repoSpec = repo.Value;
                         if (!this.podsWithRepo.TryGetValue(repoSpec, out var list))
                         {
                             list = new List<PodDataRequestInfo>();
@@ -96,7 +95,7 @@ namespace AutoCrane.Services
                 }
 
                 // there is no existing request
-                if (!pod.DataRepos.TryGetValue(repoName, out var repoSpec))
+                if (!pod.DataSources.Contains(repoName))
                 {
                     // we can't even find the data source, bailout--this shouldn't happen
                     this.logger.LogError($"Pod {pod.Id} has data request {repoName} but could not find data source.");
@@ -104,29 +103,29 @@ namespace AutoCrane.Services
                 }
 
                 // try parsing the LKG and latest values
-                if (!this.knownGoods.KnownGoodVersions.TryGetValue(repoSpec, out var repoDetailsKnownGoodVersion))
+                if (!this.knownGoods.KnownGoodVersions.TryGetValue(repoName, out var repoDetailsKnownGoodVersion))
                 {
-                    this.logger.LogError($"{pi} {repoName}/{repoSpec}: LKG missing, cannot set LKG");
+                    this.logger.LogError($"{pi} {repoName}: LKG missing, cannot set LKG");
                     return null;
                 }
 
-                if (!this.latestVersionInfo.UpgradeInfo.TryGetValue(repoSpec, out var repoDetailsLatestVersion))
+                if (!this.latestVersionInfo.UpgradeInfo.TryGetValue(repoName, out var repoDetailsLatestVersion))
                 {
-                    this.logger.LogError($"{pi} {repoName}/{repoSpec}: latest version missing");
+                    this.logger.LogError($"{pi} {repoName}: latest version missing");
                     return null;
                 }
 
                 var knownGoodVersion = DataDownloadRequestDetails.FromBase64Json(repoDetailsKnownGoodVersion);
                 if (knownGoodVersion is null)
                 {
-                    this.logger.LogError($"{pi} Cannot parse known good version of data {repoSpec}: {repoDetailsKnownGoodVersion}");
+                    this.logger.LogError($"{pi} Cannot parse known good version of data {repoName}: {repoDetailsKnownGoodVersion}");
                     return null;
                 }
 
                 var latestVersion = DataDownloadRequestDetails.FromBase64Json(repoDetailsLatestVersion);
                 if (latestVersion is null)
                 {
-                    this.logger.LogError($"{pi} Cannot parse known good version of data {repoSpec}: {repoDetailsLatestVersion}");
+                    this.logger.LogError($"{pi} Cannot parse known good version of data {repoName}: {repoDetailsLatestVersion}");
                     return null;
                 }
 
@@ -148,48 +147,48 @@ namespace AutoCrane.Services
 
                     if (existingVersion.Equals(latestVersion))
                     {
-                        this.logger.LogInformation($"{pi} {repoName}/{repoSpec} is on latest version, doing nothing.");
+                        this.logger.LogTrace($"{pi} {repoName} is on latest version, doing nothing.");
                         return null;
                     }
 
                     var existingVersionTimestamp = DateTimeOffset.FromUnixTimeSeconds(existingVersion.UnixTimestampSeconds.GetValueOrDefault());
                     if (existingVersionTimestamp > this.clock.Get() - UpgradeProbationTimeSpan)
                     {
-                        this.logger.LogInformation($"{pi} {repoName}/{repoSpec} upgraded recently. ignoring");
+                        this.logger.LogTrace($"{pi} {repoName} upgraded recently ({existingVersionTimestamp}). skipping");
                         return null;
                     }
 
                     // we know we aren't on the latest version, if we aren't on LKG, upgrade to latest
                     if (!existingVersion.Equals(knownGoodVersion))
                     {
-                        this.logger.LogInformation($"{pi} {repoName}/{repoSpec} is on version between LKG and latest, moving to latest");
+                        this.logger.LogInformation($"{pi} {repoName} is on version between LKG and latest, moving to latest");
                         return latestVersion;
                     }
 
                     // if FailingLimit% has been on latest version for at least UpgradeProbationTimeSpan, and there are no watchdog failures on dependent users, then
                     // set LKG to latest, upgrade everyone to latest
-                    var podsUsingThisData = this.podsWithRepo[repoSpec];
-                    if (this.podsDependingOnRepo.TryGetValue(repoSpec, out var podsDependingOnThisData))
+                    var podsUsingThisData = this.podsWithRepo[repoName];
+                    if (this.podsDependingOnRepo.TryGetValue(repoName, out var podsDependingOnThisData))
                     {
                         var watchdogFailureCount = podsDependingOnThisData.Where(p => this.watchdogStatusAggregator.Aggregate(p.Annotations) == WatchdogStatus.ErrorLevel).Count();
                         var pctFailing = (double)watchdogFailureCount / podsDependingOnThisData.Count;
                         if (pctFailing > UpgradePercent)
                         {
-                            this.logger.LogInformation($"{pi} {repoName}/{repoSpec} found watchdog failures on pods {watchdogFailureCount}/{podsDependingOnThisData.Count}, taking no action");
+                            this.logger.LogInformation($"{pi} {repoName} found watchdog failures on pods {watchdogFailureCount}/{podsDependingOnThisData.Count}, taking no action");
                             return null;
                         }
                     }
 
-                    var podsOnLatestVersionForProbationTimeSpanCount = podsUsingThisData.Where(p => this.PodIsOnVersionForAtLeast(p, repoSpec, latestVersion, UpgradeProbationTimeSpan)).Count();
+                    var podsOnLatestVersionForProbationTimeSpanCount = podsUsingThisData.Where(p => this.PodIsOnVersionForAtLeast(p, repoName, latestVersion, UpgradeProbationTimeSpan)).Count();
                     var podsOnLatestVersionForProbation = (double)podsOnLatestVersionForProbationTimeSpanCount / podsUsingThisData.Count;
                     if (podsOnLatestVersionForProbation >= UpgradePercent)
                     {
-                        this.logger.LogInformation($"{pi} {repoName}/{repoSpec} found pods {podsOnLatestVersionForProbationTimeSpanCount}/{podsUsingThisData.Count} on latest for probation period, upgrading to latest {latestVersion}");
+                        this.logger.LogInformation($"{pi} {repoName} found pods {podsOnLatestVersionForProbationTimeSpanCount}/{podsUsingThisData.Count} on latest for probation period, upgrading to latest {latestVersion}");
                         return latestVersion;
                     }
 
                     // otherwise put FailingLimit% on Latest and the rest on LKG
-                    var podsOnLKG = podsUsingThisData.Where(p => this.PodIsOnVersionForAtLeast(p, repoSpec, knownGoodVersion, null)).ToList();
+                    var podsOnLKG = podsUsingThisData.Where(p => this.PodIsOnVersionForAtLeast(p, repoName, knownGoodVersion, null)).ToList();
 
                     // round down or we might never upgrade anyone
                     // take at least one, but zero if there is only one
@@ -198,26 +197,25 @@ namespace AutoCrane.Services
                     var shouldNotUpgradeList = podsOnLKG.Take(numberToTake).Select(p => p.Id).ToHashSet();
                     if (shouldNotUpgradeList.Contains(pod.Id))
                     {
-                        this.logger.LogInformation($"{pi} {repoName}/{repoSpec} in do not upgrade list");
+                        this.logger.LogInformation($"{pi} {repoName} in do not upgrade list");
                         return null;
                     }
 
                     // put on latest version
-                    this.logger.LogInformation($"{pi} {repoName}/{repoSpec} upgrading to: {latestVersion}");
+                    this.logger.LogInformation($"{pi} {repoName} upgrading to: {latestVersion}");
                     return latestVersion;
                 }
                 else
                 {
                     // doesn't have a request set, so default to LKG
-                    this.logger.LogInformation($"{pi} {repoName}/{repoSpec} has no request, setting to LKG: {knownGoodVersion}");
+                    this.logger.LogInformation($"{pi} {repoName} has no request, setting to LKG: {knownGoodVersion}");
                     return knownGoodVersion;
                 }
             }
 
             private bool PodIsOnVersionForAtLeast(PodDataRequestInfo p, string repoSpec, DataDownloadRequestDetails ver, TimeSpan? timespan)
             {
-                var requestKey = p.DataRepos.FirstOrDefault(r => r.Value == repoSpec).Key;
-                var request = p.Requests.FirstOrDefault(r => r.Key == requestKey).Value;
+                var request = p.Requests.FirstOrDefault(r => r.Key == repoSpec).Value;
                 if (request is not null)
                 {
                     var version = DataDownloadRequestDetails.FromBase64Json(request);
