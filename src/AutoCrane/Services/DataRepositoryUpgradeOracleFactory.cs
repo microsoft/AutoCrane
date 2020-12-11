@@ -152,12 +152,6 @@ namespace AutoCrane.Services
                         return null;
                     }
 
-                    if (knownGoodVersion.Equals(latestVersion))
-                    {
-                        this.logger.LogInformation($"{pi} {repoName}/{repoSpec} LKG == latest, nothing to do.");
-                        return null;
-                    }
-
                     var existingVersionTimestamp = DateTimeOffset.FromUnixTimeSeconds(existingVersion.UnixTimestampSeconds.GetValueOrDefault());
                     if (existingVersionTimestamp > this.clock.Get() - UpgradeProbationTimeSpan)
                     {
@@ -198,7 +192,9 @@ namespace AutoCrane.Services
                     var podsOnLKG = podsUsingThisData.Where(p => this.PodIsOnVersionForAtLeast(p, repoSpec, knownGoodVersion, null)).ToList();
 
                     // round down or we might never upgrade anyone
-                    var numberToTake = (int)(Math.Floor(1.0 - UpgradePercent) * podsUsingThisData.Count);
+                    // take at least one, but zero if there is only one
+                    // var numberToTake = Math.Max(podsUsingThisData.Count - 1, Math.Min(1, (int)(Math.Floor(1.0 - UpgradePercent) * podsUsingThisData.Count));
+                    var numberToTake = (int)Math.Floor((1.0 - UpgradePercent) * podsUsingThisData.Count);
                     var shouldNotUpgradeList = podsOnLKG.Take(numberToTake).Select(p => p.Id).ToHashSet();
                     if (shouldNotUpgradeList.Contains(pod.Id))
                     {
@@ -233,7 +229,7 @@ namespace AutoCrane.Services
                         }
                         else
                         {
-                            return version.UnixTimestampSeconds > (this.clock.Get() - timespan.Value).ToUnixTimeSeconds();
+                            return version.UnixTimestampSeconds < (this.clock.Get() - timespan.Value).ToUnixTimeSeconds();
                         }
                     }
                 }
