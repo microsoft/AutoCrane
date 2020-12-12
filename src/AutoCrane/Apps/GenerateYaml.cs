@@ -27,6 +27,19 @@ kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   namespace: !!NAMESPACE!!
+  name: autocrane-endpoint-reader-writer
+  labels:
+    app.kubernetes.io/name: autocrane
+    app.kubernetes.io/part-of: autocrane
+rules:
+- apiGroups: [""""]
+  resources: [""endpoints""]
+  verbs: [""get"", ""list"", ""patch"", ""create"", ""update""]
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: !!NAMESPACE!!
   name: autocrane-pod-reader
   labels:
     app.kubernetes.io/name: autocrane
@@ -77,6 +90,23 @@ subjects:
 roleRef:
   kind: Role
   name: autocrane-pod-reader-writer
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: autocrane-endpoint-reader-writer-binding-autocrane
+  namespace: !!NAMESPACE!!
+  labels:
+    app.kubernetes.io/name: autocrane
+    app.kubernetes.io/part-of: autocrane
+subjects:
+- kind: ServiceAccount
+  name: autocrane
+  namespace: !!NAMESPACE!!
+roleRef:
+  kind: Role
+  name: autocrane-endpoint-reader-writer
   apiGroup: rbac.authorization.k8s.io
 ---
 kind: RoleBinding

@@ -43,7 +43,7 @@ namespace AutoCrane.Services
                 this.logger.LogInformation($"Getting data requests...");
                 requests = await this.downloadRequestFactory.GetPodRequestsAsync();
 
-                this.logger.LogInformation($"We have {requests.Count} data requests... {requests.Where(r => r.Details is null).Count()} where details are set.");
+                this.logger.LogInformation($"Requests served: {requests.Where(r => r.Details is not null).Count()}/{requests.Count}...");
                 await Task.Delay(TimeSpan.FromSeconds(GetRequestLoopSeconds), token);
                 token.ThrowIfCancellationRequested();
                 loopCount++;
@@ -99,11 +99,7 @@ namespace AutoCrane.Services
             foreach (var request in requests)
             {
                 await this.dataDownloader.DownloadAsync(request, token);
-                await this.dataLinker.LinkAsync(request.ExtractionLocation, Path.Combine(request.DataDropFolder, request.LocalName), token);
-
-                // is writing an annotation to indicate success too much access for a sidecar?
-                // var requestB64 = Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(request.Details));
-                // await this.annotationPutter.PutPodAnnotationAsync($"{CommonAnnotations.DataStatusPrefix}/{request.Name}", requestB64);
+                await this.dataLinker.LinkAsync(request.ExtractionLocation, Path.Combine(request.DataDropFolder, request.DataSource), token);
             }
 
             sw.Stop();

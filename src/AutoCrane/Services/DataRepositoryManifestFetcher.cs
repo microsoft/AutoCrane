@@ -18,7 +18,7 @@ namespace AutoCrane.Services
         private readonly HttpClient client;
         private readonly IDataRepositoryManifestReaderFactory manifestReaderFactory;
 
-        public DataRepositoryManifestFetcher(ILoggerFactory loggerFactory, IOptions<DataRepoOptions> options, IDataRepositoryManifestReaderFactory manifestReaderFactory)
+        public DataRepositoryManifestFetcher(ILoggerFactory loggerFactory, IDataRepositoryManifestReaderFactory manifestReaderFactory)
         {
             this.logger = loggerFactory.CreateLogger<DataRepositoryManifestFetcher>();
             this.client = new HttpClient();
@@ -28,7 +28,7 @@ namespace AutoCrane.Services
         public async Task<DataRepositoryManifest> FetchAsync(CancellationToken token)
         {
             var manifestUrl = $"http://datarepo/.manifest";
-            this.logger.LogInformation($"Downloading {manifestUrl}");
+            this.logger.LogTrace($"Downloading {manifestUrl}");
             var resp = await this.client.GetAsync(manifestUrl, token);
             resp.EnsureSuccessStatusCode();
             using var dropReader = this.manifestReaderFactory.FromStream(resp.Content.ReadAsStream(token));

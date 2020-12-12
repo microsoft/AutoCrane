@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using AutoCrane.Exceptions;
 using AutoCrane.Interfaces;
@@ -29,6 +30,88 @@ namespace AutoCrane.Services
             this.client = new Kubernetes(configProvider.Get());
             this.statusAggregator = statusAggregator;
             this.config = config;
+        }
+
+        public async Task<IReadOnlyDictionary<string, string>> GetEndpointAnnotationsAsync(string ns, string endpoint, CancellationToken token)
+        {
+            try
+            {
+                if (!this.config.IsAllowedNamespace(ns))
+                {
+                    throw new ForbiddenException($"namespace: {ns}");
+                }
+
+                var ep = await this.client.ReadNamespacedEndpointsAsync(endpoint, ns, cancellationToken: token);
+                return (IReadOnlyDictionary<string, string>)ep.Annotations() ?? new Dictionary<string, string>();
+            }
+            catch (HttpOperationException e)
+            {
+                if (e.Response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    return new Dictionary<string, string>();
+                }
+
+                if (!string.IsNullOrEmpty(e.Response.Content))
+                {
+                    this.logger.LogError($"Exception response content: {e.Response.Content}");
+                }
+
+                throw;
+            }
+        }
+
+        public async Task PutEndpointAnnotationsAsync(string ns, string endpoint, IReadOnlyDictionary<string, string> annotationsToUpdate, CancellationToken token)
+        {
+            V1Endpoints ep;
+            try
+            {
+                if (!this.config.IsAllowedNamespace(ns))
+                {
+                    throw new ForbiddenException($"namespace: {ns}");
+                }
+
+                ep = await this.client.ReadNamespacedEndpointsAsync(endpoint, ns, cancellationToken: token);
+            }
+            catch (HttpOperationException e)
+            {
+                if (e.Response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    var newEp = new V1Endpoints()
+                    {
+                        Metadata = new V1ObjectMeta()
+                        {
+                            NamespaceProperty = ns,
+                            Name = endpoint,
+                        },
+                    };
+
+                    ep = await this.client.CreateNamespacedEndpointsAsync(newEp, ns, cancellationToken: token);
+                }
+                else
+                {
+                    this.logger.LogError($"Exception Getting LKG: {e.Response.Content}");
+                    throw;
+                }
+            }
+
+            try
+            {
+                var newannotations = new Dictionary<string, string>(ep.Annotations() ?? new Dictionary<string, string>());
+                foreach (var ann in annotationsToUpdate)
+                {
+                    newannotations[ann.Key] = ann.Value;
+                }
+
+                var patch = new JsonPatchDocument<V1Endpoints>();
+                patch.Replace(e => e.Metadata.Annotations, newannotations);
+                var result = await this.client.PatchNamespacedEndpointsAsync(new V1Patch(patch), endpoint, ns, cancellationToken: token);
+                Console.Error.WriteLine($"{result.Name()} updated");
+            }
+            catch (HttpOperationException e)
+            {
+                this.logger.LogError($"Exception Putting LKG: {e.Response.Content}");
+                throw;
+            }
         }
 
         public async Task EvictPodAsync(PodIdentifier p)

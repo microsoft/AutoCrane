@@ -9,7 +9,9 @@ namespace AutoCrane.Models
 
         public const string DataStoreUrl = "store.autocrane.io/url";
 
-        public const string DataDeploymentPrefix = "data.autocrane.io/";
+        public const string DataDependsOn = "store.autocrane.io/deps";
+
+        public const string DataSources = "store.autocrane.io/data";
 
         public const string DataRequestPrefix = "request.data.autocrane.io/";
     }

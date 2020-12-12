@@ -49,7 +49,7 @@ namespace AutoCrane.Services
             {
                 try
                 {
-                    var dropUrl = $"http://datarepo/{request.RepoName}/{request.Details.Path}";
+                    var dropUrl = $"http://datarepo/{request.DataSource}/{request.Details.Path}";
                     this.logger.LogInformation($"Downloading {dropUrl} to {dropArchive}");
                     var data = await this.client.GetAsync(dropUrl, HttpCompletionOption.ResponseHeadersRead, token);
                     data.EnsureSuccessStatusCode();
@@ -69,7 +69,7 @@ namespace AutoCrane.Services
                 }
                 catch (Exception e)
                 {
-                    this.logger.LogError($"Exception downloading {request.LocalName}: {e}");
+                    this.logger.LogError($"Exception downloading {request.DataSource}: {e}");
 
                     // clean up partial downloads
                     if (File.Exists(dropArchive))

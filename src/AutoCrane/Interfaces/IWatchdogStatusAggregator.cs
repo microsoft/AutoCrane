@@ -12,7 +12,7 @@ namespace AutoCrane.Interfaces
         /// </summary>
         /// <param name="annotations">the pod annotations.</param>
         /// <returns>the worst status.</returns>
-        string Aggregate(IDictionary<string, string> annotations);
+        string Aggregate(IReadOnlyDictionary<string, string> annotations);
 
         /// <summary>
         /// Compares and returns the worse (more critical) status of the two.

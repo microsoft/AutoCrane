@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoCrane.Interfaces;
@@ -24,9 +23,13 @@ namespace AutoCrane.Apps
         private readonly IPodDataRequestGetter dataRequestGetter;
         private readonly IDataRepositoryManifestFetcher manifestFetcher;
         private readonly IPodAnnotationPutter podAnnotationPutter;
+        private readonly IDataRepositoryKnownGoodAccessor knownGoodAccessor;
+        private readonly IDataRepositoryLatestVersionAccessor upgradeAccessor;
+        private readonly IDataRepositoryUpgradeOracleFactory upgradeOracleFactory;
+        private readonly IClock clock;
         private readonly ILogger<Orchestrator> logger;
 
-        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter, IPodDataRequestGetter podGetter, IDataRepositoryManifestFetcher manifestFetcher, IPodAnnotationPutter podAnnotationPutter)
+        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter, IPodDataRequestGetter podGetter, IDataRepositoryManifestFetcher manifestFetcher, IPodAnnotationPutter podAnnotationPutter, IDataRepositoryKnownGoodAccessor knownGoodAccessor, IDataRepositoryLatestVersionAccessor upgradeAccessor, IDataRepositoryUpgradeOracleFactory upgradeOracleFactory, IClock clock)
         {
             this.config = config;
             this.failingPodGetter = failingPodGetter;
@@ -34,6 +37,10 @@ namespace AutoCrane.Apps
             this.dataRequestGetter = podGetter;
             this.manifestFetcher = manifestFetcher;
             this.podAnnotationPutter = podAnnotationPutter;
+            this.knownGoodAccessor = knownGoodAccessor;
+            this.upgradeAccessor = upgradeAccessor;
+            this.upgradeOracleFactory = upgradeOracleFactory;
+            this.clock = clock;
             this.logger = loggerFactory.CreateLogger<Orchestrator>();
         }
 
@@ -62,12 +69,19 @@ namespace AutoCrane.Apps
                     token.ThrowIfCancellationRequested();
 
                     var manifest = await this.manifestFetcher.FetchAsync(token);
-                    var requests = await this.FetchDataRequestsAsync(this.config.Namespaces);
-                    await this.ProcessDataRequestsAsync(manifest, requests);
 
                     var thisIterationFailingPods = new List<PodIdentifier>();
                     foreach (var ns in this.config.Namespaces)
                     {
+                        // this code gets the LKG versions, the latest versions, and all the existing pods, then creates an oracle to decide what to update (if any)
+                        var requests = await this.dataRequestGetter.GetAsync(ns);
+                        var knownGoodVersions = await this.knownGoodAccessor.GetOrUpdateAsync(ns, manifest, requests, token);
+                        var latestVersions = await this.upgradeAccessor.GetOrUpdateAsync(ns, manifest, token);
+                        var oracle = this.upgradeOracleFactory.Create(knownGoodVersions, latestVersions, requests);
+
+                        // this updates the data request annotations based on what the oracle says. then the thing getting the data will pull the latest
+                        await this.ProcessDataRequestsAsync(oracle, requests);
+
                         var failingPods = await this.failingPodGetter.GetFailingPodsAsync(ns);
                         thisIterationFailingPods.AddRange(failingPods);
                     }
@@ -108,49 +122,23 @@ namespace AutoCrane.Apps
             return 0;
         }
 
-        private async Task ProcessDataRequestsAsync(DataRepositoryManifest manifest, IReadOnlyList<PodDataRequestInfo> requests)
+        private async Task ProcessDataRequestsAsync(IDataRepositoryUpgradeOracle oracle, IReadOnlyList<PodDataRequestInfo> podRequests)
         {
-            // fixme todo this logic. we need to support upgrades (this doesn't)
-            // and better logic for picking the first version (this chooses latest not LKG)
-            foreach (var podRequest in requests.Where(r => r.NeedsRequest.Any()))
+            foreach (var podRequest in podRequests)
             {
                 var annotationsToAdd = new List<KeyValuePair<string, string>>();
-                foreach (var request in podRequest.NeedsRequest)
+                foreach (var repoName in podRequest.DataSources)
                 {
-                    if (podRequest.DataRepos.TryGetValue(request, out var dataRepoSpec))
+                    var newRequest = oracle.GetDataRequest(podRequest.Id, repoName);
+                    if (newRequest != null)
                     {
-                        if (manifest.Sources.TryGetValue(dataRepoSpec, out var sources))
-                        {
-                            this.logger.LogInformation($"Pod {podRequest.Id} requesting initial data {dataRepoSpec}");
-
-                            var sourceToPick = sources.OrderByDescending(k => k.Timestamp).FirstOrDefault();
-                            if (sourceToPick is null)
-                            {
-                                this.logger.LogError($"Pod {podRequest.Id} is requesting data repo {dataRepoSpec} does not have any available versions");
-                            }
-                            else
-                            {
-                                var downloadRequest = new DataDownloadRequestDetails()
-                                {
-                                    Hash = sourceToPick.Hash,
-                                    Path = sourceToPick.ArchiveFilePath,
-                                };
-
-                                this.logger.LogInformation($"Pod {podRequest.Id} requesting data {dataRepoSpec}, giving {downloadRequest.Path}");
-                                annotationsToAdd.Add(new KeyValuePair<string, string>(
-                                    $"{CommonAnnotations.DataRequestPrefix}{request}",
-                                    Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(downloadRequest))));
-                            }
-                        }
-                        else
-                        {
-                            this.logger.LogError($"Pod {podRequest.Id} is requesting data repo {dataRepoSpec} which is not found in manifest sources: {string.Join(',', manifest.Sources.Keys)}");
-                        }
+                        newRequest.UnixTimestampSeconds = this.clock.Get().ToUnixTimeSeconds();
+                        this.logger.LogInformation($"Pod {podRequest.Id} to request data {repoName}, request = '{newRequest}'");
+                        annotationsToAdd.Add(new KeyValuePair<string, string>($"{CommonAnnotations.DataRequestPrefix}{repoName}", newRequest.ToBase64String()));
                     }
                     else
                     {
-                        // set annotation?
-                        this.logger.LogError($"Pod {podRequest.Id} is missing annotation {CommonAnnotations.DataDeploymentPrefix}/{request}");
+                        this.logger.LogTrace($"Pod {podRequest.Id} no update for data {repoName}.");
                     }
                 }
 
@@ -159,17 +147,6 @@ namespace AutoCrane.Apps
                     await this.podAnnotationPutter.PutPodAnnotationAsync(podRequest.Id, annotationsToAdd);
                 }
             }
-        }
-
-        private async Task<IReadOnlyList<PodDataRequestInfo>> FetchDataRequestsAsync(IEnumerable<string> namespaces)
-        {
-            var list = new List<PodDataRequestInfo>();
-            foreach (var ns in namespaces)
-            {
-                list.AddRange(await this.dataRequestGetter.GetAsync(ns));
-            }
-
-            return list;
         }
 
         private Task EvictPods(HashSet<PodIdentifier> pods)
