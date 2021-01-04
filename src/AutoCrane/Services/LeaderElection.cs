@@ -32,6 +32,6 @@ namespace AutoCrane.Services
 
         public static string LeadershipElectionName { get; set; } = "autocrane";
 
-        public bool IsLeader { get; internal set; }
+        public bool IsLeader { get; private set; }
     }
 }

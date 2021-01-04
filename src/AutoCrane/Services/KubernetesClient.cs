@@ -150,17 +150,14 @@ namespace AutoCrane.Services
             }
         }
 
-        public Task<LeaderElectionResults> ElectLeaderAsync(string election)
-        {
-            throw new NotImplementedException();
-        }
-
         public Task SetupLeaderElectionAsync(string ns, string endpointName, CancellationToken token, Action onStarted, Action onStopped)
         {
             if (!this.config.IsAllowedNamespace(ns))
             {
                 throw new ForbiddenException($"namespace: {ns}");
             }
+
+            this.logger.LogInformation($"Setting up leader election using {ns}/{endpointName}");
 
             var l = new EndpointsLock(this.client, ns, endpointName, Environment.MachineName);
             var le = new LeaderElector(new LeaderElectionConfig(l)
