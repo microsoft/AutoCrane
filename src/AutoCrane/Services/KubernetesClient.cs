@@ -10,6 +10,8 @@ using AutoCrane.Exceptions;
 using AutoCrane.Interfaces;
 using AutoCrane.Models;
 using k8s;
+using k8s.LeaderElection;
+using k8s.LeaderElection.ResourceLock;
 using k8s.Models;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.Extensions.Logging;
@@ -151,6 +153,26 @@ namespace AutoCrane.Services
         public Task<LeaderElectionResults> ElectLeaderAsync(string election)
         {
             throw new NotImplementedException();
+        }
+
+        public Task SetupLeaderElectionAsync(string ns, string endpointName, CancellationToken token, Action onStarted, Action onStopped)
+        {
+            if (!this.config.IsAllowedNamespace(ns))
+            {
+                throw new ForbiddenException($"namespace: {ns}");
+            }
+
+            var l = new EndpointsLock(this.client, ns, endpointName, Environment.MachineName);
+            var le = new LeaderElector(new LeaderElectionConfig(l)
+            {
+                LeaseDuration = TimeSpan.FromSeconds(30),
+                RetryPeriod = TimeSpan.FromSeconds(10),
+            });
+
+            le.OnStartedLeading += onStarted;
+            le.OnStoppedLeading += onStopped;
+
+            return le.RunAsync(token);
         }
 
         public async Task<IReadOnlyList<PodIdentifier>> GetFailingPodsAsync(string ns)

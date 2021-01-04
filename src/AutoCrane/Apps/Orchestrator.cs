@@ -27,9 +27,10 @@ namespace AutoCrane.Apps
         private readonly IDataRepositoryLatestVersionAccessor upgradeAccessor;
         private readonly IDataRepositoryUpgradeOracleFactory upgradeOracleFactory;
         private readonly IClock clock;
+        private readonly ILeaderElection leaderElection;
         private readonly ILogger<Orchestrator> logger;
 
-        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter, IPodDataRequestGetter podGetter, IDataRepositoryManifestFetcher manifestFetcher, IPodAnnotationPutter podAnnotationPutter, IDataRepositoryKnownGoodAccessor knownGoodAccessor, IDataRepositoryLatestVersionAccessor upgradeAccessor, IDataRepositoryUpgradeOracleFactory upgradeOracleFactory, IClock clock)
+        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter, IPodDataRequestGetter podGetter, IDataRepositoryManifestFetcher manifestFetcher, IPodAnnotationPutter podAnnotationPutter, IDataRepositoryKnownGoodAccessor knownGoodAccessor, IDataRepositoryLatestVersionAccessor upgradeAccessor, IDataRepositoryUpgradeOracleFactory upgradeOracleFactory, IClock clock, ILeaderElection leaderElection)
         {
             this.config = config;
             this.failingPodGetter = failingPodGetter;
@@ -41,6 +42,7 @@ namespace AutoCrane.Apps
             this.upgradeAccessor = upgradeAccessor;
             this.upgradeOracleFactory = upgradeOracleFactory;
             this.clock = clock;
+            this.leaderElection = leaderElection;
             this.logger = loggerFactory.CreateLogger<Orchestrator>();
         }
 
@@ -68,44 +70,52 @@ namespace AutoCrane.Apps
                 {
                     token.ThrowIfCancellationRequested();
 
-                    var manifest = await this.manifestFetcher.FetchAsync(token);
-
-                    var thisIterationFailingPods = new List<PodIdentifier>();
-                    foreach (var ns in this.config.Namespaces)
+                    if (this.leaderElection.IsLeader)
                     {
-                        // this code gets the LKG versions, the latest versions, and all the existing pods, then creates an oracle to decide what to update (if any)
-                        var requests = await this.dataRequestGetter.GetAsync(ns);
-                        var knownGoodVersions = await this.knownGoodAccessor.GetOrUpdateAsync(ns, manifest, requests, token);
-                        var latestVersions = await this.upgradeAccessor.GetOrUpdateAsync(ns, manifest, token);
-                        var oracle = this.upgradeOracleFactory.Create(knownGoodVersions, latestVersions, requests);
+                        var manifest = await this.manifestFetcher.FetchAsync(token);
 
-                        // this updates the data request annotations based on what the oracle says. then the thing getting the data will pull the latest
-                        await this.ProcessDataRequestsAsync(oracle, requests);
-
-                        var failingPods = await this.failingPodGetter.GetFailingPodsAsync(ns);
-                        thisIterationFailingPods.AddRange(failingPods);
-                    }
-
-                    while (podsWithFailingWatchdog.Count > WatchdogFailuresBeforeEviction)
-                    {
-                        podsWithFailingWatchdog.Dequeue();
-                    }
-
-                    if (podsWithFailingWatchdog.Count == WatchdogFailuresBeforeEviction)
-                    {
-                        var podsFailingEveryWatchdog = new HashSet<PodIdentifier>(thisIterationFailingPods);
-                        foreach (var iteration in podsWithFailingWatchdog)
+                        var thisIterationFailingPods = new List<PodIdentifier>();
+                        foreach (var ns in this.config.Namespaces)
                         {
-                            podsFailingEveryWatchdog.IntersectWith(iteration);
+                            // this code gets the LKG versions, the latest versions, and all the existing pods, then creates an oracle to decide what to update (if any)
+                            var requests = await this.dataRequestGetter.GetAsync(ns);
+                            var knownGoodVersions = await this.knownGoodAccessor.GetOrUpdateAsync(ns, manifest, requests, token);
+                            var latestVersions = await this.upgradeAccessor.GetOrUpdateAsync(ns, manifest, token);
+                            var oracle = this.upgradeOracleFactory.Create(knownGoodVersions, latestVersions, requests);
+
+                            // this updates the data request annotations based on what the oracle says. then the thing getting the data will pull the latest
+                            await this.ProcessDataRequestsAsync(oracle, requests);
+
+                            var failingPods = await this.failingPodGetter.GetFailingPodsAsync(ns);
+                            thisIterationFailingPods.AddRange(failingPods);
                         }
 
-                        if (podsFailingEveryWatchdog.Any())
+                        while (podsWithFailingWatchdog.Count > WatchdogFailuresBeforeEviction)
                         {
-                            await this.EvictPods(podsFailingEveryWatchdog);
+                            podsWithFailingWatchdog.Dequeue();
                         }
-                    }
 
-                    podsWithFailingWatchdog.Enqueue(thisIterationFailingPods);
+                        if (podsWithFailingWatchdog.Count == WatchdogFailuresBeforeEviction)
+                        {
+                            var podsFailingEveryWatchdog = new HashSet<PodIdentifier>(thisIterationFailingPods);
+                            foreach (var iteration in podsWithFailingWatchdog)
+                            {
+                                podsFailingEveryWatchdog.IntersectWith(iteration);
+                            }
+
+                            if (podsFailingEveryWatchdog.Any())
+                            {
+                                await this.EvictPods(podsFailingEveryWatchdog);
+                            }
+                        }
+
+                        podsWithFailingWatchdog.Enqueue(thisIterationFailingPods);
+                    }
+                    else
+                    {
+                        // not the leader
+                        this.logger.LogInformation("Not the leader");
+                    }
 
                     await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds), token);
                     iterations--;
