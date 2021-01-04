@@ -72,44 +72,7 @@ namespace AutoCrane.Apps
 
                     if (this.leaderElection.IsLeader)
                     {
-                        var manifest = await this.manifestFetcher.FetchAsync(token);
-
-                        var thisIterationFailingPods = new List<PodIdentifier>();
-                        foreach (var ns in this.config.Namespaces)
-                        {
-                            // this code gets the LKG versions, the latest versions, and all the existing pods, then creates an oracle to decide what to update (if any)
-                            var requests = await this.dataRequestGetter.GetAsync(ns);
-                            var knownGoodVersions = await this.knownGoodAccessor.GetOrUpdateAsync(ns, manifest, requests, token);
-                            var latestVersions = await this.upgradeAccessor.GetOrUpdateAsync(ns, manifest, token);
-                            var oracle = this.upgradeOracleFactory.Create(knownGoodVersions, latestVersions, requests);
-
-                            // this updates the data request annotations based on what the oracle says. then the thing getting the data will pull the latest
-                            await this.ProcessDataRequestsAsync(oracle, requests);
-
-                            var failingPods = await this.failingPodGetter.GetFailingPodsAsync(ns);
-                            thisIterationFailingPods.AddRange(failingPods);
-                        }
-
-                        while (podsWithFailingWatchdog.Count > WatchdogFailuresBeforeEviction)
-                        {
-                            podsWithFailingWatchdog.Dequeue();
-                        }
-
-                        if (podsWithFailingWatchdog.Count == WatchdogFailuresBeforeEviction)
-                        {
-                            var podsFailingEveryWatchdog = new HashSet<PodIdentifier>(thisIterationFailingPods);
-                            foreach (var iteration in podsWithFailingWatchdog)
-                            {
-                                podsFailingEveryWatchdog.IntersectWith(iteration);
-                            }
-
-                            if (podsFailingEveryWatchdog.Any())
-                            {
-                                await this.EvictPods(podsFailingEveryWatchdog);
-                            }
-                        }
-
-                        podsWithFailingWatchdog.Enqueue(thisIterationFailingPods);
+                        await this.ProcessFailingPodsAndDataRequestsAsync(podsWithFailingWatchdog, token);
                     }
                     else
                     {
@@ -130,6 +93,48 @@ namespace AutoCrane.Apps
             }
 
             return 0;
+        }
+
+        private async Task ProcessFailingPodsAndDataRequestsAsync(Queue<List<PodIdentifier>> podsWithFailingWatchdog, CancellationToken token)
+        {
+            var manifest = await this.manifestFetcher.FetchAsync(token);
+
+            var thisIterationFailingPods = new List<PodIdentifier>();
+            foreach (var ns in this.config.Namespaces)
+            {
+                // this code gets the LKG versions, the latest versions, and all the existing pods, then creates an oracle to decide what to update (if any)
+                var requests = await this.dataRequestGetter.GetAsync(ns);
+                var knownGoodVersions = await this.knownGoodAccessor.GetOrUpdateAsync(ns, manifest, requests, token);
+                var latestVersions = await this.upgradeAccessor.GetOrUpdateAsync(ns, manifest, token);
+                var oracle = this.upgradeOracleFactory.Create(knownGoodVersions, latestVersions, requests);
+
+                // this updates the data request annotations based on what the oracle says. then the thing getting the data will pull the latest
+                await this.ProcessDataRequestsAsync(oracle, requests);
+
+                var failingPods = await this.failingPodGetter.GetFailingPodsAsync(ns);
+                thisIterationFailingPods.AddRange(failingPods);
+            }
+
+            while (podsWithFailingWatchdog.Count > WatchdogFailuresBeforeEviction)
+            {
+                podsWithFailingWatchdog.Dequeue();
+            }
+
+            if (podsWithFailingWatchdog.Count == WatchdogFailuresBeforeEviction)
+            {
+                var podsFailingEveryWatchdog = new HashSet<PodIdentifier>(thisIterationFailingPods);
+                foreach (var iteration in podsWithFailingWatchdog)
+                {
+                    podsFailingEveryWatchdog.IntersectWith(iteration);
+                }
+
+                if (podsFailingEveryWatchdog.Any())
+                {
+                    await this.EvictPods(podsFailingEveryWatchdog);
+                }
+            }
+
+            podsWithFailingWatchdog.Enqueue(thisIterationFailingPods);
         }
 
         private async Task ProcessDataRequestsAsync(IDataRepositoryUpgradeOracle oracle, IReadOnlyList<PodDataRequestInfo> podRequests)
