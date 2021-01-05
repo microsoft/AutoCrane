@@ -67,6 +67,7 @@ namespace AutoCrane
             services.AddSingleton<PostWatchdogService>();
             services.AddSingleton<Orchestrator>();
             services.AddSingleton<DataDeployInit>();
+            services.AddSingleton<SecretWriter>();
             services.AddLogging(logging =>
             {
                 logging.ClearProviders();
@@ -88,6 +89,7 @@ namespace AutoCrane
             services.Configure<AutoCraneOptions>(configuration.GetSection("AutoCrane"));
             services.Configure<WatchdogHealthzOptions>(configuration.GetSection("Watchdogs"));
             services.Configure<DataRepoOptions>(configuration.GetSection("DataRepo"));
+            services.Configure<SecretWriterOptions>(configuration.GetSection("SecretWriter"));
         }
 
         internal static ServiceProvider GetServiceProvider(string[] args)
