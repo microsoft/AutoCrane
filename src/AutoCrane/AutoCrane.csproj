@@ -6,7 +6,8 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="KubernetesClient" Version="2.0.33" />
+    <PackageReference Include="KubernetesClient" Version="4.0.3" />
+    <PackageReference Include="Microsoft.AspNetCore.JsonPatch" Version="5.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.9" />
     <PackageReference Include="prometheus-net" Version="4.0.0" />
     <PackageReference Include="prometheus-net.AspNetCore" Version="4.0.0" />

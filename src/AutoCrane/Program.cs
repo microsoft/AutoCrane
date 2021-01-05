@@ -4,10 +4,11 @@
 using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using AutoCrane.Apps;
 using AutoCrane.Interfaces;
+using AutoCrane.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Prometheus.DotNetRuntime;
 
 namespace AutoCrane
@@ -53,6 +54,8 @@ namespace AutoCrane
                     cts.Cancel();
                     eventArgs.Cancel = false;
                 };
+
+                LeaderElection.LeadershipElectionName = $"acleader{mode}";
 
                 switch (mode)
                 {

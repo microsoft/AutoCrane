@@ -651,10 +651,10 @@ spec:
                 ["image"] = "autocrane",
                 ["pull"] = "Never", // for local development
                 ["cpu"] = "10m",
-                ["autocrane_replicas"] = "1",
+                ["autocrane_replicas"] = "2",
                 ["watchdogprober_replicas"] = "1",
                 ["testworkload_replicas"] = "2",
-                ["datarepo_replicas"] = "2",
+                ["datarepo_replicas"] = "1",
                 ["use_watchdogprober"] = "1",
                 ["use_testworkload"] = "0",
                 ["use_datarepo"] = "1",

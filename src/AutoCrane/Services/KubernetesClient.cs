@@ -10,6 +10,8 @@ using AutoCrane.Exceptions;
 using AutoCrane.Interfaces;
 using AutoCrane.Models;
 using k8s;
+using k8s.LeaderElection;
+using k8s.LeaderElection.ResourceLock;
 using k8s.Models;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.Extensions.Logging;
@@ -104,7 +106,7 @@ namespace AutoCrane.Services
 
                 var patch = new JsonPatchDocument<V1Endpoints>();
                 patch.Replace(e => e.Metadata.Annotations, newannotations);
-                var result = await this.client.PatchNamespacedEndpointsAsync(new V1Patch(patch), endpoint, ns, cancellationToken: token);
+                var result = await this.client.PatchNamespacedEndpointsAsync(new V1Patch(patch, V1Patch.PatchType.JsonPatch), endpoint, ns, cancellationToken: token);
                 Console.Error.WriteLine($"{result.Name()} updated");
             }
             catch (HttpOperationException e)
@@ -148,9 +150,28 @@ namespace AutoCrane.Services
             }
         }
 
-        public Task<LeaderElectionResults> ElectLeaderAsync(string election)
+        public Task SetupLeaderElectionAsync(string ns, string endpointName, CancellationToken token, Action onStarted, Action onStopped)
         {
-            throw new NotImplementedException();
+            if (!this.config.IsAllowedNamespace(ns))
+            {
+                throw new ForbiddenException($"namespace: {ns}");
+            }
+
+            this.logger.LogInformation($"Setting up leader election using {ns}/{endpointName}");
+
+            var l = new AutoCraneEndpointsLock(this.client, ns, endpointName, Environment.MachineName, this.logger);
+            var le = new AutoCraneLeaderElector(
+                new LeaderElectionConfig(l)
+                {
+                    LeaseDuration = TimeSpan.FromSeconds(30),
+                    RetryPeriod = TimeSpan.FromSeconds(10),
+                },
+                this.logger);
+
+            le.OnStartedLeading += onStarted;
+            le.OnStoppedLeading += onStopped;
+
+            return le.RunAsync(token);
         }
 
         public async Task<IReadOnlyList<PodIdentifier>> GetFailingPodsAsync(string ns)
@@ -278,7 +299,7 @@ namespace AutoCrane.Services
                     patch.Replace(e => e.Metadata.Labels, newlabels);
                 }
 
-                var result = await this.client.PatchNamespacedPodAsync(new V1Patch(patch), podName.Name, podName.Namespace);
+                var result = await this.client.PatchNamespacedPodAsync(new V1Patch(patch, V1Patch.PatchType.JsonPatch), podName.Name, podName.Namespace);
                 Console.Error.WriteLine($"{result.Name()} updated");
             }
             catch (HttpOperationException e)
