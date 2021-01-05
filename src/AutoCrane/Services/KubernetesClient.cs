@@ -106,7 +106,7 @@ namespace AutoCrane.Services
 
                 var patch = new JsonPatchDocument<V1Endpoints>();
                 patch.Replace(e => e.Metadata.Annotations, newannotations);
-                var result = await this.client.PatchNamespacedEndpointsAsync(new V1Patch(patch), endpoint, ns, cancellationToken: token);
+                var result = await this.client.PatchNamespacedEndpointsAsync(new V1Patch(patch, V1Patch.PatchType.JsonPatch), endpoint, ns, cancellationToken: token);
                 Console.Error.WriteLine($"{result.Name()} updated");
             }
             catch (HttpOperationException e)
@@ -159,12 +159,14 @@ namespace AutoCrane.Services
 
             this.logger.LogInformation($"Setting up leader election using {ns}/{endpointName}");
 
-            var l = new EndpointsLock(this.client, ns, endpointName, Environment.MachineName);
-            var le = new LeaderElector(new LeaderElectionConfig(l)
-            {
-                LeaseDuration = TimeSpan.FromSeconds(30),
-                RetryPeriod = TimeSpan.FromSeconds(10),
-            });
+            var l = new AutoCraneEndpointsLock(this.client, ns, endpointName, Environment.MachineName, this.logger);
+            var le = new AutoCraneLeaderElector(
+                new LeaderElectionConfig(l)
+                {
+                    LeaseDuration = TimeSpan.FromSeconds(30),
+                    RetryPeriod = TimeSpan.FromSeconds(10),
+                },
+                this.logger);
 
             le.OnStartedLeading += onStarted;
             le.OnStoppedLeading += onStopped;
@@ -297,7 +299,7 @@ namespace AutoCrane.Services
                     patch.Replace(e => e.Metadata.Labels, newlabels);
                 }
 
-                var result = await this.client.PatchNamespacedPodAsync(new V1Patch(patch), podName.Name, podName.Namespace);
+                var result = await this.client.PatchNamespacedPodAsync(new V1Patch(patch, V1Patch.PatchType.JsonPatch), podName.Name, podName.Namespace);
                 Console.Error.WriteLine($"{result.Name()} updated");
             }
             catch (HttpOperationException e)

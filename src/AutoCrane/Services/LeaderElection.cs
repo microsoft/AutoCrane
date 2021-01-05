@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,20 +15,31 @@ namespace AutoCrane.Services
         public LeaderElection(KubernetesClient client, IAutoCraneConfig config, ILoggerFactory loggerFactory)
         {
             var logger = loggerFactory.CreateLogger<LeaderElection>();
-            Task.Run(() => client.SetupLeaderElectionAsync(
-                config.Namespaces.First(),
-                LeadershipElectionName,
-                CancellationToken.None,
-                () =>
+            Task.Run(async () =>
+            {
+                try
                 {
-                    logger.LogInformation("Became leader");
-                    this.IsLeader = true;
-                },
-                () =>
+                    await client.SetupLeaderElectionAsync(
+                        config.Namespaces.First(),
+                        LeadershipElectionName,
+                        CancellationToken.None,
+                        () =>
+                        {
+                            logger.LogInformation("Became leader");
+                            this.IsLeader = true;
+                        },
+                        () =>
+                        {
+                            logger.LogInformation("No longer leader");
+                            this.IsLeader = false;
+                        });
+                }
+                catch (Exception e)
                 {
-                    logger.LogInformation("No longer leader");
-                    this.IsLeader = false;
-                }));
+                    logger.LogError($"Unhandled exception in LeaderElection ctor: {e}");
+                    throw;
+                }
+            });
         }
 
         public static string LeadershipElectionName { get; set; } = "autocrane";
