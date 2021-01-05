@@ -79,7 +79,8 @@ namespace AutoCrane.Services
                     this.logger.LogInformation($"directories that may exist {string.Join(';', shouldNotDeleteDirectories)}");
                     this.logger.LogInformation($"files that may exist {string.Join(';', shouldNotDeleteFiles)}");
 
-                    var filesToDelete = Directory.GetFiles(dropFolder).Where(file => !shouldNotDeleteFiles.Contains(file) && !shouldNotDeleteDirectories.Contains(file));
+                    var filesToDelete = Directory.GetFiles(dropFolder).Where(file => !shouldNotDeleteFiles.Contains(file)).ToList();
+                    var dirsToDelete = Directory.GetDirectories(dropFolder).Where(file => !shouldNotDeleteDirectories.Contains(file)).ToList();
                     foreach (var file in filesToDelete)
                     {
                         if (File.Exists(file))
@@ -87,10 +88,22 @@ namespace AutoCrane.Services
                             this.logger.LogInformation($"Deleting file: {file}");
                             File.Delete(file);
                         }
-                        else if (Directory.Exists(file))
+                        else
                         {
-                            this.logger.LogInformation($"Deleting directory: {file}");
-                            Directory.Delete(file, recursive: true);
+                            this.logger.LogError($"Could not find: {file}");
+                        }
+                    }
+
+                    foreach (var dir in dirsToDelete)
+                    {
+                        if (Directory.Exists(dir))
+                        {
+                            this.logger.LogInformation($"Deleting directory: {dir}");
+                            Directory.Delete(dir, recursive: true);
+                        }
+                        else
+                        {
+                            this.logger.LogError($"Could not find: {dir}");
                         }
                     }
                 }
