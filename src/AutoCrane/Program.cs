@@ -62,6 +62,9 @@ namespace AutoCrane
                     case "orchestrate":
                         return ConsoleWrapper<Orchestrator>(newargs, cts.Token);
 
+                    case "secretwriter":
+                        return ConsoleWrapper<SecretWriter>(newargs, cts.Token);
+
                     case "getwatchdog":
                         return ConsoleWrapper<GetWatchdogService>(newargs, cts.Token);
 
