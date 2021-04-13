@@ -30,7 +30,14 @@ namespace AutoCrane.Services
             var itemsToAdd = new Dictionary<string, string>();
             foreach (var item in manifest.Sources)
             {
-                var mostRecentData = item.Value.ToList().OrderByDescending(k => k.Timestamp).First();
+                var recentData = item.Value.ToList().OrderByDescending(k => k.Timestamp);
+                if (!recentData.Any())
+                {
+                    this.logger.LogWarning($"Missing recent data for {item.Key}/{item.Value}");
+                    continue;
+                }
+
+                var mostRecentData = recentData.First();
                 var req = new DataDownloadRequestDetails(mostRecentData.ArchiveFilePath, mostRecentData.Hash);
 
                 var latestVersion = req.ToBase64String();
