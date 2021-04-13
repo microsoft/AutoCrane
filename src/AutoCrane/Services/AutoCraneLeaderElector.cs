@@ -183,7 +183,7 @@ namespace AutoCrane.Services
                 && !this.IsLeader())
             {
                 // lock is held by %v and has not yet expired", oldLeaderElectionRecord.HolderIdentity
-                this.logger.LogInformation($"lock is held by {oldLeaderElectionRecord.HolderIdentity} and has not yet expired");
+                this.logger.LogInformation($"lock is held by {oldLeaderElectionRecord.HolderIdentity} and has not yet expired. Observed time: {this.observedTime}. Lease Duration: {this.config.LeaseDuration}");
                 return false;
             }
 
