@@ -59,6 +59,8 @@ namespace AutoCrane
             services.AddSingleton<ICredentialProvider, CredentialProviderForAzureManagedIdentity>();
             services.AddSingleton<ICredentialProvider, CredentialProviderForAzureKeyVault>();
             services.AddSingleton<ICredentialProvider, CredentialProviderForAzureDevOps>();
+            services.AddSingleton<IDurationParser, DurationParser>();
+            services.AddSingleton<IExpiredObjectDeleter, ExpiredObjectDeleter>();
 
             services.AddSingleton<CredentialProviderForAzureManagedIdentity>();
             services.AddSingleton<KubernetesClient>();
