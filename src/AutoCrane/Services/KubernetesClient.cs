@@ -25,13 +25,15 @@ namespace AutoCrane.Services
         private readonly Kubernetes client;
         private readonly IWatchdogStatusAggregator statusAggregator;
         private readonly IAutoCraneConfig config;
+        private readonly IDurationParser durationParser;
 
-        public KubernetesClient(IKubernetesConfigProvider configProvider, IWatchdogStatusAggregator statusAggregator, ILoggerFactory loggerFactory, IAutoCraneConfig config)
+        public KubernetesClient(IKubernetesConfigProvider configProvider, IWatchdogStatusAggregator statusAggregator, ILoggerFactory loggerFactory, IAutoCraneConfig config, IDurationParser durationParser)
         {
             this.logger = loggerFactory.CreateLogger<KubernetesClient>();
             this.client = new Kubernetes(configProvider.Get());
             this.statusAggregator = statusAggregator;
             this.config = config;
+            this.durationParser = durationParser;
         }
 
         public async Task<IReadOnlyDictionary<string, string>> GetEndpointAnnotationsAsync(string ns, string endpoint, CancellationToken token)
@@ -232,6 +234,52 @@ namespace AutoCrane.Services
             }
         }
 
+        public async Task DeleteExpiredObjects(string ns, DateTimeOffset now, CancellationToken token)
+        {
+            try
+            {
+                if (!this.config.IsAllowedNamespace(ns))
+                {
+                    throw new ForbiddenException($"namespace: {ns}");
+                }
+
+                { // services
+                    var serviceList = await this.client.ListNamespacedServiceAsync(ns, cancellationToken: token);
+                    var listToDelete = serviceList.Items
+                        .Where(x => x.Metadata.Annotations != null
+                                    &&  x.Metadata.Annotations.TryGetValue("janitor/ttl", out var ttl)
+                                    && this.TimeToLiveIsExpired(x.Metadata.CreationTimestamp, ttl, now))
+                        .Select(x => x.Name())
+                        .ToList();
+                    foreach (var name in listToDelete)
+                    {
+                        this.logger.LogInformation($"Deleting Service {ns}/{name}", ns, name);
+                        await this.client.DeleteNamespacedServiceAsync(name, ns, cancellationToken: token);
+                    }
+                }
+
+                { // deployments
+                    var serviceList = await this.client.ListNamespacedDeploymentAsync(ns, cancellationToken: token);
+                    var listToDelete = serviceList.Items
+                        .Where(x => x.Metadata.Annotations != null
+                                    && x.Metadata.Annotations.TryGetValue("janitor/ttl", out var ttl)
+                                    && this.TimeToLiveIsExpired(x.Metadata.CreationTimestamp, ttl, now))
+                        .Select(x => x.Name())
+                        .ToList();
+                    foreach (var name in listToDelete)
+                    {
+                        this.logger.LogInformation($"Deleting Deployment {ns}/{name}", ns, name);
+                        await this.client.DeleteNamespacedDeploymentAsync(name, ns, cancellationToken: token);
+                    }
+                }
+            }
+            catch (HttpOperationException e)
+            {
+                this.logger.LogError($"Exception Deleting Services: {e.Response.Content}");
+                throw;
+            }
+        }
+
         public async Task<IReadOnlyList<PodInfo>> GetPodAnnotationAsync(string ns)
         {
             try
@@ -311,6 +359,27 @@ namespace AutoCrane.Services
 
                 throw;
             }
+        }
+
+        private bool TimeToLiveIsExpired(DateTime? creation, string ttlString, DateTimeOffset now)
+        {
+            if (creation == null || creation == DateTime.MinValue)
+            {
+                return false;
+            }
+
+            var ttl = this.durationParser.Parse(ttlString);
+            if (ttl == null)
+            {
+                return false;
+            }
+
+            if (creation + ttl < now)
+            {
+                return true;
+            }
+
+            return false;
         }
     }
 }

@@ -28,9 +28,10 @@ namespace AutoCrane.Apps
         private readonly IDataRepositoryUpgradeOracleFactory upgradeOracleFactory;
         private readonly IClock clock;
         private readonly ILeaderElection leaderElection;
+        private readonly IExpiredObjectDeleter expiredObjectDeleter;
         private readonly ILogger<Orchestrator> logger;
 
-        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter, IPodDataRequestGetter podGetter, IDataRepositoryManifestFetcher manifestFetcher, IPodAnnotationPutter podAnnotationPutter, IDataRepositoryKnownGoodAccessor knownGoodAccessor, IDataRepositoryLatestVersionAccessor upgradeAccessor, IDataRepositoryUpgradeOracleFactory upgradeOracleFactory, IClock clock, ILeaderElection leaderElection)
+        public Orchestrator(IAutoCraneConfig config, ILoggerFactory loggerFactory, IFailingPodGetter failingPodGetter, IPodEvicter podEvicter, IPodDataRequestGetter podGetter, IDataRepositoryManifestFetcher manifestFetcher, IPodAnnotationPutter podAnnotationPutter, IDataRepositoryKnownGoodAccessor knownGoodAccessor, IDataRepositoryLatestVersionAccessor upgradeAccessor, IDataRepositoryUpgradeOracleFactory upgradeOracleFactory, IClock clock, ILeaderElection leaderElection, IExpiredObjectDeleter expiredObjectDeleter)
         {
             this.config = config;
             this.failingPodGetter = failingPodGetter;
@@ -43,6 +44,7 @@ namespace AutoCrane.Apps
             this.upgradeOracleFactory = upgradeOracleFactory;
             this.clock = clock;
             this.leaderElection = leaderElection;
+            this.expiredObjectDeleter = expiredObjectDeleter;
             this.logger = loggerFactory.CreateLogger<Orchestrator>();
         }
 
@@ -73,6 +75,7 @@ namespace AutoCrane.Apps
                     if (this.leaderElection.IsLeader)
                     {
                         await this.ProcessFailingPodsAndDataRequestsAsync(podsWithFailingWatchdog, token);
+                        await this.CleanupExpiredItems(token);
                     }
                     else
                     {
@@ -93,6 +96,14 @@ namespace AutoCrane.Apps
             }
 
             return 0;
+        }
+
+        private async Task CleanupExpiredItems(CancellationToken token)
+        {
+            foreach (var ns in this.config.Namespaces)
+            {
+                await this.expiredObjectDeleter.DeleteAsync(ns, token);
+            }
         }
 
         private async Task ProcessFailingPodsAndDataRequestsAsync(Queue<List<PodIdentifier>> podsWithFailingWatchdog, CancellationToken token)
