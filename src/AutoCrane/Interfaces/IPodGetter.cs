@@ -9,8 +9,8 @@ namespace AutoCrane.Interfaces
 {
     public interface IPodGetter
     {
-        Task<IReadOnlyList<PodInfo>> GetPodsAsync(string ns);
+        Task<IReadOnlyList<PodInfo>> GetPodAnnotationAsync(string ns);
 
-        Task<PodInfo> GetPodAsync(PodIdentifier podIdentifier);
+        Task<PodInfo> GetPodAnnotationAsync(PodIdentifier podIdentifier);
     }
 }

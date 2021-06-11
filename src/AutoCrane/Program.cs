@@ -55,8 +55,6 @@ namespace AutoCrane
                     eventArgs.Cancel = false;
                 };
 
-                LeaderElection.LeadershipElectionName = $"acleader{mode}";
-
                 switch (mode)
                 {
                     case "orchestrate":
