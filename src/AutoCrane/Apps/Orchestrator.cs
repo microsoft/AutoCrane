@@ -58,6 +58,8 @@ namespace AutoCrane.Apps
                 return 3;
             }
 
+            var backgroundTask = this.leaderElection.StartBackgroundTask("acleaderorchestrate", TimeSpan.FromSeconds(30), token);
+
             var podsWithFailingWatchdog = new Queue<List<PodIdentifier>>();
 
             while (iterations > 0)
@@ -66,6 +68,12 @@ namespace AutoCrane.Apps
                 {
                     this.logger.LogError($"Hit max consecutive error count...exiting...");
                     return 2;
+                }
+
+                if (backgroundTask.IsCompleted)
+                {
+                    this.logger.LogError($"Leadership election task has completed");
+                    return 3;
                 }
 
                 try
@@ -102,7 +110,7 @@ namespace AutoCrane.Apps
         {
             foreach (var ns in this.config.Namespaces)
             {
-                await this.expiredObjectDeleter.DeleteAsync(ns, token);
+                await this.expiredObjectDeleter.DeleteExpiredObjectsAsync(ns, this.clock.Get(), token);
             }
         }
 

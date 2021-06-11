@@ -21,17 +21,19 @@ namespace AutoCrane
                     .WriteTo.Async(a => GetConsoleLogger(a))
                     .CreateLogger();
 
+            services.AddSingleton<IFailingPodGetter, KubernetesClient>();
+            services.AddSingleton<IPodGetter, KubernetesClient>();
+            services.AddSingleton<IPodGetter, KubernetesClient>();
+            services.AddSingleton<IExpiredObjectDeleter, KubernetesClient>();
+
             services.AddSingleton<IWatchdogStatusPutter, WatchdogStatusPutter>();
             services.AddSingleton<IWatchdogStatusGetter, WatchdogStatusGetter>();
-            services.AddSingleton<IFailingPodGetter, FailingPodGetter>();
-            services.AddSingleton<IPodGetter, PodGetter>();
             services.AddSingleton<IPodAnnotationPutter, PodAnnotationPutter>();
             services.AddSingleton<IPodEvicter, PodEvicter>();
             services.AddSingleton<IKubernetesConfigProvider, KubernetesConfigProvider>();
             services.AddSingleton<IWatchdogStatusAggregator, WatchdogStatusAggregator>();
             services.AddSingleton<IConsecutiveHealthMonitor, ConsecutiveHealthMonitor>();
             services.AddSingleton<IUptimeMonitor, UptimeMonitor>();
-            services.AddSingleton<IPodGetter, PodGetter>();
             services.AddSingleton<IPodIdentifierFactory, PodIdentifierFactory>();
             services.AddSingleton<IAutoCraneConfig, AutoCraneConfig>();
             services.AddSingleton<IClock, DefaultClock>();
@@ -60,7 +62,6 @@ namespace AutoCrane
             services.AddSingleton<ICredentialProvider, CredentialProviderForAzureKeyVault>();
             services.AddSingleton<ICredentialProvider, CredentialProviderForAzureDevOps>();
             services.AddSingleton<IDurationParser, DurationParser>();
-            services.AddSingleton<IExpiredObjectDeleter, ExpiredObjectDeleter>();
 
             services.AddSingleton<CredentialProviderForAzureManagedIdentity>();
             services.AddSingleton<KubernetesClient>();

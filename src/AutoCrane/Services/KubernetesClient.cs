@@ -10,8 +10,6 @@ using AutoCrane.Exceptions;
 using AutoCrane.Interfaces;
 using AutoCrane.Models;
 using k8s;
-using k8s.LeaderElection;
-using k8s.LeaderElection.ResourceLock;
 using k8s.Models;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.Extensions.Logging;
@@ -19,7 +17,7 @@ using Microsoft.Rest;
 
 namespace AutoCrane.Services
 {
-    internal sealed class KubernetesClient
+    internal sealed class KubernetesClient : IFailingPodGetter, IEndpointAnnotationAccessor, IPodGetter, IExpiredObjectDeleter
     {
         private readonly ILogger<KubernetesClient> logger;
         private readonly Kubernetes client;
@@ -152,30 +150,6 @@ namespace AutoCrane.Services
             }
         }
 
-        public Task SetupLeaderElectionAsync(string ns, string endpointName, CancellationToken token, Action onStarted, Action onStopped)
-        {
-            if (!this.config.IsAllowedNamespace(ns))
-            {
-                throw new ForbiddenException($"namespace: {ns}");
-            }
-
-            this.logger.LogInformation($"Setting up leader election using {ns}/{endpointName}");
-
-            var l = new AutoCraneEndpointsLock(this.client, ns, endpointName, Environment.MachineName, this.logger);
-            var le = new AutoCraneLeaderElector(
-                new LeaderElectionConfig(l)
-                {
-                    LeaseDuration = TimeSpan.FromSeconds(30),
-                    RetryPeriod = TimeSpan.FromSeconds(10),
-                },
-                this.logger);
-
-            le.OnStartedLeading += onStarted;
-            le.OnStoppedLeading += onStopped;
-
-            return le.RunAsync(token);
-        }
-
         public async Task<IReadOnlyList<PodIdentifier>> GetFailingPodsAsync(string ns)
         {
             try
@@ -234,7 +208,7 @@ namespace AutoCrane.Services
             }
         }
 
-        public async Task DeleteExpiredObjects(string ns, DateTimeOffset now, CancellationToken token)
+        public async Task DeleteExpiredObjectsAsync(string ns, DateTimeOffset now, CancellationToken token)
         {
             try
             {
@@ -247,7 +221,7 @@ namespace AutoCrane.Services
                     var serviceList = await this.client.ListNamespacedServiceAsync(ns, cancellationToken: token);
                     var listToDelete = serviceList.Items
                         .Where(x => x.Metadata.Annotations != null
-                                    &&  x.Metadata.Annotations.TryGetValue("janitor/ttl", out var ttl)
+                                    && x.Metadata.Annotations.TryGetValue("janitor/ttl", out var ttl)
                                     && this.TimeToLiveIsExpired(x.Metadata.CreationTimestamp, ttl, now))
                         .Select(x => x.Name())
                         .ToList();

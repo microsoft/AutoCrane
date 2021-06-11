@@ -67,7 +67,7 @@ namespace AutoCrane.Apps
                     foreach (var ns in this.config.Namespaces)
                     {
                         nsCount++;
-                        var pods = await this.podGetter.GetPodsAsync(ns);
+                        var pods = await this.podGetter.GetPodAnnotationAsync(ns);
                         foreach (var pod in pods)
                         {
                             podCount++;
