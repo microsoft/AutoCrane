@@ -25,6 +25,7 @@ namespace AutoCrane
             services.AddSingleton<IPodGetter, KubernetesClient>();
             services.AddSingleton<IPodGetter, KubernetesClient>();
             services.AddSingleton<IExpiredObjectDeleter, KubernetesClient>();
+            services.AddSingleton<IEndpointAnnotationAccessor, KubernetesClient>();
 
             services.AddSingleton<IWatchdogStatusPutter, WatchdogStatusPutter>();
             services.AddSingleton<IWatchdogStatusGetter, WatchdogStatusGetter>();

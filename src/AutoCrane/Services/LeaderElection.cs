@@ -28,7 +28,7 @@ namespace AutoCrane.Services
         private readonly string ns;
         private readonly string identity;
         private string leaderObjectName = string.Empty;
-        private TimeSpan leaseDuration = TimeSpan.FromSeconds(30);
+        private TimeSpan leaseDuration = TimeSpan.FromSeconds(90);
 
         public LeaderElection(IEndpointAnnotationAccessor client, IAutoCraneConfig config, ILoggerFactory loggerFactory)
         {
