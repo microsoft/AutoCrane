@@ -187,10 +187,10 @@ namespace AutoCrane.Services
                 if (annotations == null)
                 {
                     this.logger.LogError($"Annotations is null");
-                    return new PodInfo(podName, new Dictionary<string, string>(), string.Empty);
+                    return new PodInfo(podName, new Dictionary<string, string>(), this.ReadPodContainerState(existingPod), string.Empty);
                 }
 
-                return new PodInfo(podName, new Dictionary<string, string>(annotations), existingPod.Status.PodIP);
+                return new PodInfo(podName, new Dictionary<string, string>(annotations), this.ReadPodContainerState(existingPod), existingPod.Status.PodIP);
             }
             catch (HttpOperationException e)
             {
@@ -273,7 +273,7 @@ namespace AutoCrane.Services
                         dict = new Dictionary<string, string>(ann);
                     }
 
-                    list.Add(new PodInfo(new PodIdentifier(item.Namespace(), item.Name()), dict, item.Status.PodIP));
+                    list.Add(new PodInfo(new PodIdentifier(item.Namespace(), item.Name()), dict, this.ReadPodContainerState(item), item.Status.PodIP));
                 }
 
                 return list;
@@ -333,6 +333,33 @@ namespace AutoCrane.Services
 
                 throw;
             }
+        }
+
+        private IReadOnlyDictionary<string, bool> ReadPodContainerState(V1Pod existingPod)
+        {
+            var dict = new Dictionary<string, bool>();
+            if (existingPod == null)
+            {
+                return dict;
+            }
+
+            if (existingPod.Status.ContainerStatuses != null)
+            {
+                foreach (var item in existingPod.Status.ContainerStatuses)
+                {
+                    dict[item.Name] = item.Ready;
+                }
+            }
+
+            if (existingPod.Status.EphemeralContainerStatuses != null)
+            {
+                foreach (var item in existingPod.Status.EphemeralContainerStatuses)
+                {
+                    dict[item.Name] = item.Ready;
+                }
+            }
+
+            return dict;
         }
 
         private bool TimeToLiveIsExpired(DateTime? creation, string ttlString, DateTimeOffset now)

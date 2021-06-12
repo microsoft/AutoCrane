@@ -31,15 +31,33 @@ namespace AutoCrane.Services
         {
             var lkg = await this.client.GetEndpointAnnotationsAsync(ns, AutoCraneLastKnownGoodEndpointName, token);
             var itemsToAdd = new Dictionary<string, string>();
-            foreach (var item in manifest.Sources)
+            foreach (var source in manifest.Sources)
             {
-                if (!lkg.ContainsKey(item.Key) && item.Value.Count > 0)
+                if (source.Value.Count > 0)
                 {
-                    var mostRecentData = item.Value.ToList().OrderByDescending(k => k.Timestamp).First();
-                    var req = new DataDownloadRequestDetails(mostRecentData.ArchiveFilePath, mostRecentData.Hash);
+                    bool shouldUpgrade = false;
 
-                    this.logger.LogInformation($"Setting LKG for {item.Key} to hash={req.Hash} filePath={req.Path}");
-                    itemsToAdd[item.Key] = req.ToBase64String();
+                    if (!lkg.ContainsKey(source.Key))
+                    {
+                        // LKG entry does not exist
+                        shouldUpgrade = true;
+                    }
+                    else if (lkg.TryGetValue(source.Key, out var req))
+                    {
+                        var lkgRequest = DataDownloadRequestDetails.FromBase64Json(req);
+
+                        // if the manifest no longer contains the LKG, we shouldn't send people to download the LKG
+                        shouldUpgrade = !source.Value.Any(sv => sv.ArchiveFilePath == lkgRequest?.Path);
+                    }
+
+                    if (shouldUpgrade)
+                    {
+                        var mostRecentData = source.Value.ToList().OrderByDescending(k => k.Timestamp).First();
+                        var req = new DataDownloadRequestDetails(mostRecentData.ArchiveFilePath, mostRecentData.Hash);
+
+                        this.logger.LogInformation($"Setting LKG for {source.Key} to hash={req.Hash} filePath={req.Path}");
+                        itemsToAdd[source.Key] = req.ToBase64String();
+                    }
                 }
             }
 
@@ -78,7 +96,13 @@ namespace AutoCrane.Services
                 await this.client.PutEndpointAnnotationsAsync(ns, AutoCraneLastKnownGoodEndpointName, itemsToAdd, token);
             }
 
-            return new DataRepositoryKnownGoods(lkg.Union(itemsToAdd).ToDictionary(ks => ks.Key, vs => vs.Value));
+            var newDict = new Dictionary<string, string>(lkg);
+            foreach (var item in itemsToAdd)
+            {
+                newDict[item.Key] = item.Value;
+            }
+
+            return new DataRepositoryKnownGoods(newDict);
         }
     }
 }
