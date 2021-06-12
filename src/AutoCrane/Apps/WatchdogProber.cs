@@ -71,6 +71,14 @@ namespace AutoCrane.Apps
                         foreach (var pod in pods)
                         {
                             podCount++;
+
+                            var containersNotReady = pod.ContainersReady.Where(c => !c.Value).Select(c => c.Key).ToList();
+                            if (containersNotReady.Any())
+                            {
+                                this.logger.LogInformation("Pod {pod} has containers not ready, skipping probe: {containersNotReady}", pod.Id.ToString(), string.Join(',', containersNotReady));
+                                continue;
+                            }
+
                             var watchdogsToPut = new List<WatchdogStatus>();
                             foreach (var annotation in pod.Annotations)
                             {
