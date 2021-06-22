@@ -43,7 +43,7 @@ namespace AutoCrane.Apps
             var errorCount = 0;
             if (!this.config.Namespaces.Any())
             {
-                this.logger.LogError($"No namespaces configured to watch... set env var AutoCrane__Namespaces to a comma-separated value");
+                this.logger.LogError("No namespaces configured to watch... set env var AutoCrane__Namespaces to a comma-separated value");
                 return 3;
             }
 
@@ -53,7 +53,7 @@ namespace AutoCrane.Apps
 
                 if (errorCount > ConsecutiveErrorCountBeforeExiting)
                 {
-                    this.logger.LogError($"Hit max consecutive error count...exiting...");
+                    this.logger.LogError("Hit max consecutive error count...exiting...");
                     return 2;
                 }
 
@@ -92,7 +92,7 @@ namespace AutoCrane.Apps
                                     var error = await this.ProbePod(pod.PodIp, annotation.Value);
                                     if (error != null && !alreadyInErrorState)
                                     {
-                                        this.logger.LogWarning($"Watchdog {wdName} Error on {pod.Id}: {error}");
+                                        this.logger.LogWarning("Watchdog {watchdogName} Error on {podId}: {error}", wdName, pod.Id.ToString(), error);
 
                                         watchdogsToPut.Add(new WatchdogStatus()
                                         {
@@ -104,7 +104,7 @@ namespace AutoCrane.Apps
                                     else if (error == null && alreadyInErrorState)
                                     {
                                         // we need to clear the error
-                                        this.logger.LogWarning($"Watchdog {wdName} OK on {pod.Id}");
+                                        this.logger.LogWarning("Watchdog {watchdogName} OK on {podId}", wdName, pod.Id.ToString());
 
                                         watchdogsToPut.Add(new WatchdogStatus()
                                         {
@@ -124,14 +124,14 @@ namespace AutoCrane.Apps
                     }
 
                     sw.Stop();
-                    this.logger.LogInformation($"Scanned {nsCount} namespaces, {podCount} pods, and {probeCount} probes in {sw.Elapsed}");
+                    this.logger.LogInformation("Scanned {nsCount} namespaces, {podCount} pods, and {probeCount} probes in {elapsed}", nsCount, podCount, probeCount, sw.Elapsed.ToString());
                     await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds), token);
                     iterations--;
                     errorCount = 0;
                 }
                 catch (Exception e)
                 {
-                    this.logger.LogError($"Unhandled exception: {e}");
+                    this.logger.LogError(e, "Unhandled exception: {exception}", e);
                     errorCount++;
                     await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds), token);
                 }
@@ -142,7 +142,7 @@ namespace AutoCrane.Apps
 
         private async Task<string?> ProbePod(string podIp, string urlTemplate)
         {
-            this.logger.LogDebug($"Probing pod {podIp} at {urlTemplate}");
+            this.logger.LogDebug("Probing pod {podIp} at {urlTemplate}", podIp, urlTemplate);
             var match = WatchdogUrlRegex.Match(urlTemplate);
             if (!match.Success)
             {
@@ -160,13 +160,13 @@ namespace AutoCrane.Apps
             using var cts = new CancellationTokenSource(this.config.WatchdogProbeTimeout);
             try
             {
-                this.logger.LogDebug($"Probing {url}");
+                this.logger.LogDebug("Probing {url}", url.ToString());
                 var resp = await this.httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cts.Token);
                 resp.EnsureSuccessStatusCode();
             }
             catch (Exception e)
             {
-                this.logger.LogDebug($"Error probing {url}: {e}");
+                this.logger.LogDebug("Error probing {url}: {exception}", url.ToString(), e);
                 return e.Message;
             }
 

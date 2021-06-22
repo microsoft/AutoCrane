@@ -28,7 +28,6 @@ namespace AutoCrane.Apps
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "no")]
         public void Configure(IApplicationBuilder app)
         {
-            app.UseMiddleware<LogRequestMiddleware>();
             app.UseRouting();
             app.UseEndpoints(endpoints =>
             {
@@ -63,7 +62,7 @@ namespace AutoCrane.Apps
                     var uptime = uptimeMonitor.Uptime;
                     if (alwaysHealthySeconds > 0 && uptime > TimeSpan.FromSeconds(alwaysHealthySeconds))
                     {
-                        logger.LogInformation($"Uptime {uptime} surpassed {alwaysHealthySeconds}: success");
+                        logger.LogInformation("Uptime {uptime} surpassed {alwaysHealthySeconds}: success", uptime.ToString(), alwaysHealthySeconds);
                         ctx.Response.StatusCode = 200;
                     }
 
@@ -72,12 +71,12 @@ namespace AutoCrane.Apps
 
                     if (healthMonitor.IsHealthy(podid))
                     {
-                        logger.LogInformation($"Pod {podid} is healthy");
+                        logger.LogInformation("Pod {podId} is healthy", podid.ToString());
                         ctx.Response.StatusCode = 200;
                         return;
                     }
 
-                    logger.LogInformation($"Pod {podid} is not healthy or has not been for long enough");
+                    logger.LogInformation("Pod {podId} is not healthy or has not been for long enough", podid.ToString());
                     ctx.Response.StatusCode = 500;
                 });
             });

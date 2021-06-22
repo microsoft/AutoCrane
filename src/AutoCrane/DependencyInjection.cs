@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+using System;
 using AutoCrane.Apps;
 using AutoCrane.Interfaces;
 using AutoCrane.Models;
@@ -8,8 +9,8 @@ using AutoCrane.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Serilog;
-using Serilog.Configuration;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 namespace AutoCrane
 {
@@ -17,10 +18,6 @@ namespace AutoCrane
     {
         internal static void Setup(IConfiguration configuration, IServiceCollection services)
         {
-            Log.Logger = new LoggerConfiguration()
-                    .WriteTo.Async(a => GetConsoleLogger(a))
-                    .CreateLogger();
-
             services.AddSingleton<IFailingPodGetter, KubernetesClient>();
             services.AddSingleton<IPodGetter, KubernetesClient>();
             services.AddSingleton<IPodGetter, KubernetesClient>();
@@ -83,8 +80,29 @@ namespace AutoCrane
                     }
 
                     return true;
-                }).AddProvider(new Serilog.Extensions.Logging.SerilogLoggerProvider());
+                });
+
+                var otlpEndpoint = Environment.GetEnvironmentVariable("OTLP_ENDPOINT");
+                if (!string.IsNullOrEmpty(otlpEndpoint))
+                {
+                    // Adding the OtlpExporter creates a GrpcChannel.
+                    // This switch must be set before creating a GrpcChannel/HttpClient when calling an insecure gRPC service.
+                    // See: https://docs.microsoft.com/aspnet/core/grpc/troubleshoot#call-insecure-grpc-services-with-net-core-client
+                    AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+
+                    services.AddOpenTelemetryTracing((builder) => builder
+                        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("AutoCrane"))
+                        .AddAspNetCoreInstrumentation()
+                        .AddHttpClientInstrumentation()
+                        .AddOtlpExporter(otlpOptions =>
+                        {
+                            otlpOptions.Endpoint = new Uri(otlpEndpoint);
+                        }));
+                }
+
+                logging.AddConsole();
             });
+
             services.AddOptions();
 
             services.Configure<WatchdogStatus>(configuration.GetSection("Watchdog"));
@@ -101,11 +119,6 @@ namespace AutoCrane
             var services = new ServiceCollection();
             Setup(new ConfigurationBuilder().AddEnvironmentVariables().AddCommandLine(args).Build(), services);
             return services.BuildServiceProvider();
-        }
-
-        private static void GetConsoleLogger(LoggerSinkConfiguration a)
-        {
-            a.Console(outputTemplate: "{Level:u1}:{Timestamp:yyyyMMdd HH:mm:ss.fff}: {Message:lj}{NewLine}");
         }
     }
 }

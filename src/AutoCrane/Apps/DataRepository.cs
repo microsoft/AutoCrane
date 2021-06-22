@@ -28,7 +28,6 @@ namespace AutoCrane.Apps
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "ASP.NET")]
         public void Configure(IApplicationBuilder app)
         {
-            app.UseMiddleware<LogRequestMiddleware>();
             app.UseRouting();
             app.UseEndpoints(endpoints =>
             {
@@ -43,21 +42,21 @@ namespace AutoCrane.Apps
                     if (!lastDataRepoCrawl.HasValue || lastDataRepoCrawl.Value > DataRepositoryCrawler.HeartbeatTimeout)
                     {
                         ctx.Response.StatusCode = 500;
-                        logger.LogError($"crawler not running, last heartbeat: {lastDataRepoCrawl}");
+                        logger.LogError("crawler not running, last heartbeat: {lastDataRepoCrawl}", lastDataRepoCrawl.ToString());
                         return ctx.Response.WriteAsync("crawler not running");
                     }
 
                     if (string.IsNullOrEmpty(opts.Value.ArchivePath))
                     {
                         ctx.Response.StatusCode = 500;
-                        logger.LogError($"archive path not set");
+                        logger.LogError("archive path not set");
                         return ctx.Response.WriteAsync("path not set");
                     }
 
                     if (!Directory.Exists(opts.Value.ArchivePath))
                     {
                         ctx.Response.StatusCode = 500;
-                        logger.LogError($"archive path does not exist");
+                        logger.LogError("archive path does not exist");
                         return ctx.Response.WriteAsync("path does not exist");
                     }
 

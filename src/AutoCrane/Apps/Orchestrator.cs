@@ -54,7 +54,7 @@ namespace AutoCrane.Apps
             var errorCount = 0;
             if (!this.config.Namespaces.Any())
             {
-                this.logger.LogError($"No namespaces configured to watch... set env var AutoCrane__Namespaces to a comma-separated value");
+                this.logger.LogCritical("No namespaces configured to watch... set env var AutoCrane__Namespaces to a comma-separated value");
                 return 3;
             }
 
@@ -66,13 +66,13 @@ namespace AutoCrane.Apps
             {
                 if (errorCount > ConsecutiveErrorCountBeforeExiting)
                 {
-                    this.logger.LogError($"Hit max consecutive error count...exiting...");
+                    this.logger.LogCritical("Hit max consecutive error count...exiting...");
                     return 2;
                 }
 
                 if (backgroundTask.IsCompleted)
                 {
-                    this.logger.LogError($"Leadership election task has completed");
+                    this.logger.LogCritical("Leadership election task has completed");
                     return 3;
                 }
 
@@ -97,7 +97,7 @@ namespace AutoCrane.Apps
                 }
                 catch (Exception e)
                 {
-                    this.logger.LogError($"Unhandled exception: {e}");
+                    this.logger.LogError(e, "Unhandled exception: {exception}", e);
                     errorCount++;
                     await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds), token);
                 }
@@ -167,12 +167,12 @@ namespace AutoCrane.Apps
                     if (newRequest != null)
                     {
                         newRequest.UnixTimestampSeconds = this.clock.Get().ToUnixTimeSeconds();
-                        this.logger.LogInformation($"Pod {podRequest.Id} to request data {repoName}, request = '{newRequest}'");
+                        this.logger.LogInformation("Pod {podId} to request data {repoName}, request = '{newRequest}'", podRequest.Id, repoName, newRequest.ToString());
                         annotationsToAdd.Add(new KeyValuePair<string, string>($"{CommonAnnotations.DataRequestPrefix}{repoName}", newRequest.ToBase64String()));
                     }
                     else
                     {
-                        this.logger.LogTrace($"Pod {podRequest.Id} no update for data {repoName}.");
+                        this.logger.LogTrace("Pod {podId} no update for data {repoName}", podRequest.Id, repoName);
                     }
                 }
 

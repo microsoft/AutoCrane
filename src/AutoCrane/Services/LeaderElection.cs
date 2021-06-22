@@ -125,7 +125,6 @@ namespace AutoCrane.Services
                     this.logger.LogError(e, "BackgroundTaskLoop cancelled: {exception}", e.ToString());
                 }
             }
-
         }
 
         private async Task<LeaderElectionRecord> EnsureEndpointExists(CancellationToken token)

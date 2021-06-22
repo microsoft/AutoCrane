@@ -26,7 +26,6 @@ namespace AutoCrane.Apps
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "ASP.NET")]
         public void Configure(IApplicationBuilder app)
         {
-            app.UseMiddleware<LogRequestMiddleware>();
             app.UseRouting();
             app.UseEndpoints(endpoints =>
             {

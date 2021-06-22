@@ -37,14 +37,14 @@ namespace AutoCrane.Apps
                 }
                 catch (Exception e)
                 {
-                    this.logger.LogError($"Unhandled exception: {e}");
+                    this.logger.LogError(e, "Unhandled exception: {exception}", e);
                     errorCount++;
                 }
 
                 await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds), token);
             }
 
-            this.logger.LogError($"Hit max consecutive error count...exiting...");
+            this.logger.LogCritical("Hit max consecutive error count...exiting...");
             return 1;
         }
     }
