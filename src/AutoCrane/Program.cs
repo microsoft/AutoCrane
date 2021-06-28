@@ -104,10 +104,6 @@ namespace AutoCrane
                 Console.Error.WriteLine($"Unhandled exception in main: {e}");
                 return 1;
             }
-            finally
-            {
-                Serilog.Log.CloseAndFlush();
-            }
         }
 
         private static int ConsoleWrapper<T>(string[] newargs, CancellationToken token)

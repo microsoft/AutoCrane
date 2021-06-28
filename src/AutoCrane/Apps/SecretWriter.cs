@@ -55,24 +55,24 @@ namespace AutoCrane.Apps
                     {
                         var filename = entry.Key;
                         var credSpec = entry.Value;
-                        this.logger.LogInformation($"Writing secret spec '{credSpec}' to {filename}");
+                        this.logger.LogInformation("Writing secret spec '{credSpec}' to {filename}", credSpec, filename);
                         var secret = await this.credentialHelper.LookupAsync(credSpec);
                         File.WriteAllText(filename, secret.Secret);
                     }
 
-                    this.logger.LogInformation($"Finished writing {sources.Count} secrets");
+                    this.logger.LogInformation("Finished writing {sourcesCount} secrets", sources.Count);
                     return 0;
                 }
                 catch (Exception e)
                 {
-                    this.logger.LogError($"Unhandled exception: {e}");
+                    this.logger.LogError(e, "Unhandled exception: {exception}", e);
                     errorCount++;
                 }
 
                 await Task.Delay(TimeSpan.FromSeconds(IterationLoopSeconds), token);
             }
 
-            this.logger.LogError($"Hit max consecutive error count...exiting...");
+            this.logger.LogError("Hit max consecutive error count...exiting...");
             return 1;
         }
     }
